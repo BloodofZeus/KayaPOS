@@ -84,31 +84,34 @@ export async function registerRoutes(
 
   await ensureDefaultAdmin();
 
-  app.post("/api/setup/test-db", testDbLimiter, async (req, res) => {
-    const { url } = req.body as { url?: string };
-    if (!url || typeof url !== "string" || url.trim() === "") {
-      return res.status(400).json({ ok: false, error: "A database URL is required." });
-    }
-    const testPool = new pg.Pool({
-      connectionString: url.trim(),
-      max: 1,
-      connectionTimeoutMillis: 5000,
-      ssl: isRemoteHost(url.trim()) ? true : false,
-    });
-    try {
-      const client = await testPool.connect();
-      try {
-        await client.query("SELECT 1");
-        return res.json({ ok: true });
-      } finally {
-        client.release();
+  if (process.env.DISABLE_DB_TEST !== "1") {
+    app.post("/api/setup/test-db", testDbLimiter, async (req, res) => {
+      const { url } = req.body as { url?: string };
+      if (!url || typeof url !== "string" || url.trim() === "") {
+        return res.status(400).json({ ok: false, error: "A database URL is required." });
       }
-    } catch (err: any) {
-      return res.json({ ok: false, error: err.message || "Connection failed." });
-    } finally {
-      testPool.end().catch(() => {});
-    }
-  });
+      const testPool = new pg.Pool({
+        connectionString: url.trim(),
+        max: 1,
+        connectionTimeoutMillis: 5000,
+        ssl: isRemoteHost(url.trim()) ? true : false,
+      });
+      try {
+        const client = await testPool.connect();
+        try {
+          await client.query("SELECT 1");
+          return res.json({ ok: true });
+        } finally {
+          client.release();
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Connection failed.";
+        return res.status(422).json({ ok: false, error: message });
+      } finally {
+        testPool.end().catch(() => {});
+      }
+    });
+  }
 
   app.post("/api/auth/register", requireAuth, async (req, res) => {
     try {

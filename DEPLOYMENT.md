@@ -21,6 +21,7 @@ Set the following environment variables in your Vercel project settings (**Setti
 | `SESSION_SECRET` | Yes | A long, random string used to sign session cookies. Generate with: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` |
 | `NODE_ENV` | Yes | Set to `production` |
 | `DB_POOL_MAX` | No | Max PostgreSQL connections per function instance (default: `2` on Vercel) |
+| `DISABLE_DB_TEST` | No | Set to `1` to disable the unauthenticated `POST /api/setup/test-db` endpoint after initial setup |
 
 ---
 
