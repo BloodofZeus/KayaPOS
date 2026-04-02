@@ -27,7 +27,11 @@ export async function createApp() {
 
   app.set("trust proxy", 1);
 
-  await migrate(db, { migrationsFolder: "migrations" });
+  if (process.env.DATABASE_URL) {
+    await migrate(db, { migrationsFolder: "migrations" });
+  } else {
+    console.warn("[app] DATABASE_URL not set — skipping migrations. Set this variable to connect a database.");
+  }
 
   app.use(
     express.json({

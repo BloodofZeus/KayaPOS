@@ -34,27 +34,42 @@ export default function Login() {
     }
   };
 
+  async function callSetupApi(path: string, url: string) {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const text = await res.text();
+    try {
+      return { status: res.status, data: JSON.parse(text) as Record<string, unknown> };
+    } catch {
+      return {
+        status: res.status,
+        data: {
+          ok: false,
+          error: `Server returned HTTP ${res.status}. The API may not be ready yet — check that DATABASE_URL is configured in your deployment settings.`,
+        } as Record<string, unknown>,
+      };
+    }
+  }
+
   const handleTestDb = async () => {
     setDbTestStatus("testing");
     setDbTestError("");
     setDbActivateStatus("idle");
     setDbActivateError("");
     try {
-      const res = await fetch("/api/setup/test-db", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: dbUrl }),
-      });
-      const data = await res.json();
+      const { data } = await callSetupApi("/api/setup/test-db", dbUrl);
       if (data.ok) {
         setDbTestStatus("ok");
       } else {
         setDbTestStatus("error");
-        setDbTestError(data.error || "Connection failed.");
+        setDbTestError((data.error as string) || "Connection failed.");
       }
     } catch {
       setDbTestStatus("error");
-      setDbTestError("Could not reach the server. Make sure the app is running.");
+      setDbTestError("Network error — could not reach the server.");
     }
   };
 
@@ -62,21 +77,21 @@ export default function Login() {
     setDbActivateStatus("activating");
     setDbActivateError("");
     try {
-      const res = await fetch("/api/setup/activate-db", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: dbUrl }),
-      });
-      const data = await res.json();
+      const { data } = await callSetupApi("/api/setup/activate-db", dbUrl);
       if (data.ok) {
         setDbActivateStatus("done");
+      } else if (data.vercel) {
+        setDbActivateStatus("error");
+        setDbActivateError(
+          "You are on Vercel — set DATABASE_URL in your Vercel project's Environment Variables, then redeploy.",
+        );
       } else {
         setDbActivateStatus("error");
-        setDbActivateError(data.error || "Could not switch database.");
+        setDbActivateError((data.error as string) || "Could not switch database.");
       }
     } catch {
       setDbActivateStatus("error");
-      setDbActivateError("Could not reach the server.");
+      setDbActivateError("Network error — could not reach the server.");
     }
   };
 

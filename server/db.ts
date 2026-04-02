@@ -2,10 +2,6 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL must be set");
-}
-
 export function isRemoteHost(url: string): boolean {
   return !url.includes("localhost") && !url.includes("127.0.0.1");
 }
@@ -24,15 +20,35 @@ function buildPool(url: string): pg.Pool {
   });
 }
 
-let _pool: pg.Pool = buildPool(process.env.DATABASE_URL);
-let _db = drizzle(_pool, { schema });
+type DrizzleDB = ReturnType<typeof drizzle<typeof schema>>;
 
-export { _db as db };
+let _pool: pg.Pool | null = null;
+let _db: DrizzleDB | null = null;
+
+function initDb(): DrizzleDB {
+  if (!_db) {
+    const url = process.env.DATABASE_URL;
+    if (!url) {
+      throw new Error(
+        "DATABASE_URL is not configured. Set this environment variable in your deployment settings and restart."
+      );
+    }
+    _pool = buildPool(url);
+    _db = drizzle(_pool, { schema });
+  }
+  return _db;
+}
+
+export const db: DrizzleDB = new Proxy({} as DrizzleDB, {
+  get(_target, prop: string | symbol) {
+    return (initDb() as any)[prop];
+  },
+});
 
 export async function reinitializeDb(url: string): Promise<void> {
   const oldPool = _pool;
   _pool = buildPool(url);
   _db = drizzle(_pool, { schema });
   process.env.DATABASE_URL = url;
-  oldPool.end().catch(() => {});
+  oldPool?.end().catch(() => {});
 }
