@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import rateLimit from "express-rate-limit";
 import { db } from "./db";
 import { storage } from "./storage";
 import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "@shared/schema";
@@ -10,6 +11,8 @@ import bcrypt from "bcryptjs";
 import pg from "pg";
 
 const PgSession = connectPg(session);
+
+const MAX_SYNC_ITEMS = 500;
 
 declare module "express-session" {
   interface SessionData {
@@ -24,11 +27,27 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts. Please try again in 15 minutes." },
+});
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (isProduction && !process.env.SESSION_SECRET) {
+    throw new Error(
+      "SESSION_SECRET environment variable must be set in production. " +
+      "Generate a strong random string and set it before starting the server."
+    );
+  }
 
   const sessionPool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
@@ -41,13 +60,13 @@ export async function registerRoutes(
         tableName: "sessions",
         createTableIfMissing: true,
       }),
-      secret: process.env.SESSION_SECRET || "kaya-pos-session-secret-change-in-production",
+      secret: process.env.SESSION_SECRET || "kaya-pos-dev-secret-not-for-production",
       resave: false,
       saveUninitialized: false,
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
-        secure: false,
+        secure: isProduction,
         sameSite: "lax",
       },
     })
@@ -96,7 +115,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
     try {
       const { username, password } = req.body;
       if (!username || !password) {
@@ -255,6 +274,9 @@ export async function registerRoutes(
       if (!Array.isArray(products)) {
         return res.status(400).json({ error: "Expected array of products" });
       }
+      if (products.length > MAX_SYNC_ITEMS) {
+        return res.status(400).json({ error: `Batch too large. Maximum ${MAX_SYNC_ITEMS} items per request.` });
+      }
 
       const BATCH_SIZE = 50;
       const results = [];
@@ -322,6 +344,9 @@ export async function registerRoutes(
       if (!Array.isArray(orders)) {
         return res.status(400).json({ error: "Expected array of orders" });
       }
+      if (orders.length > MAX_SYNC_ITEMS) {
+        return res.status(400).json({ error: `Batch too large. Maximum ${MAX_SYNC_ITEMS} items per request.` });
+      }
 
       const results = [];
       const BATCH_SIZE = 50;
@@ -364,6 +389,9 @@ export async function registerRoutes(
       const customers = req.body;
       if (!Array.isArray(customers)) {
         return res.status(400).json({ error: "Expected array of customers" });
+      }
+      if (customers.length > MAX_SYNC_ITEMS) {
+        return res.status(400).json({ error: `Batch too large. Maximum ${MAX_SYNC_ITEMS} items per request.` });
       }
 
       const results = [];
@@ -424,7 +452,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/sync/status", async (_req, res) => {
+  app.get("/api/sync/status", requireAuth, async (req, res) => {
     try {
       const products = await db.select().from(syncedProducts);
       const orders = await db.select().from(syncedOrders);
@@ -454,6 +482,26 @@ async function ensureDefaultAdmin() {
         role: "admin",
       });
       console.log("Default admin account created (username: admin, password: admin123)");
+      console.warn(
+        "\n" +
+        "========================================================\n" +
+        "  SECURITY WARNING: Default admin account created.\n" +
+        "  Username: admin  |  Password: admin123\n" +
+        "  CHANGE THIS PASSWORD before going to production!\n" +
+        "========================================================\n"
+      );
+    } else {
+      const isDefaultPassword = await bcrypt.compare("admin123", existing.password);
+      if (isDefaultPassword) {
+        console.warn(
+          "\n" +
+          "========================================================\n" +
+          "  SECURITY WARNING: Admin account still uses the\n" +
+          "  default password 'admin123'.\n" +
+          "  CHANGE THIS PASSWORD before going to production!\n" +
+          "========================================================\n"
+        );
+      }
     }
   } catch (error) {
     console.error("Failed to create default admin:", error);

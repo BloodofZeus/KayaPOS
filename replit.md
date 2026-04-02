@@ -53,11 +53,28 @@ npm run db:push   # Sync database schema
 ## Default Admin Credentials
 
 - **Username:** admin
-- **Password:** admin123
+- **Password:** admin123 (change immediately in production!)
+
+## Environment Variables
+
+See `.env.example` for all required/optional variables:
+- `DATABASE_URL` — PostgreSQL connection string (required)
+- `SESSION_SECRET` — Strong random string for signing sessions (required in production)
+- `PORT` — Server port (default: 5000)
+- `NODE_ENV` — Set to `production` for production deployments
+
+## Security Notes
+
+- `SESSION_SECRET` must be set in production; the server will refuse to start without it
+- Session cookies use `secure: true` in production (HTTPS-only)
+- Login endpoint is rate-limited to 10 requests per 15 minutes per IP
+- A warning is logged at startup if the default admin password is unchanged
+- All sync API routes require authentication; the sync status endpoint is also protected
+- Sync routes reject batches exceeding 500 items
 
 ## Deployment
 
 - **Target:** Autoscale
 - **Build:** `npm run build`
 - **Run:** `node dist/index.cjs`
-- Requires `DATABASE_URL` environment variable (PostgreSQL)
+- Requires `DATABASE_URL` and `SESSION_SECRET` environment variables
