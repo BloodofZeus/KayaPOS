@@ -74,7 +74,23 @@ See `.env.example` for all required/optional variables:
 
 ## Deployment
 
+### Replit / VPS (current)
 - **Target:** Autoscale
 - **Build:** `npm run build`
 - **Run:** `node dist/index.cjs`
 - Requires `DATABASE_URL` and `SESSION_SECRET` environment variables
+
+### Vercel
+- See `DEPLOYMENT.md` for full instructions
+- `vercel.json` at project root configures routing
+- `api/index.ts` is the serverless Express entry point
+- Static assets served from Vercel CDN (`dist/public`)
+- API routes routed to serverless function via `/api/:path*` rewrite
+- `vercel-build` script (`vite build`) generates the frontend for Vercel
+
+## Server Architecture
+
+- `server/app.ts` — App factory (`createApp()` + `log()`), shared by all entry points
+- `server/index.ts` — Traditional entry (adds static/Vite serving, starts HTTP listener)
+- `api/index.ts` — Vercel serverless entry (exports Express handler, no static serving)
+- Database pool: auto-limits to 2 connections on Vercel (`VERCEL=1`), configurable via `DB_POOL_MAX`
