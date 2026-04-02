@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 {"runId":"4SSQ9UBSvTyJEHIRm2sKI","workflowName":"Start application","startTime":1775153174203,"userId":"agent","endTime":1775155066008,"step":"FINISHED"}
+=======
+{"runId":"4SSQ9UBSvTyJEHIRm2sKI","workflowName":"Start application","startTime":1775153174203,"userId":"agent"}
+>>>>>>> b0b07abf2cdacb24363893d2c041b67ba79aa608
