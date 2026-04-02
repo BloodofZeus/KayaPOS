@@ -22,6 +22,15 @@ export default async function handler(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const app = await getApp();
-  (app as unknown as NodeHandler)(req, res);
+  try {
+    const app = await getApp();
+    (app as unknown as NodeHandler)(req, res);
+  } catch (err) {
+    console.error("Handler initialization error:", err);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ error: "Service unavailable" }));
+    }
+  }
 }
