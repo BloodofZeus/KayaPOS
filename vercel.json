@@ -5,12 +5,12 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 30,
-      "includeFiles": ["dist/public/**", "migrations/**"]
+      "includeFiles": "migrations/**"
     }
   },
   "routes": [
     { "handle": "filesystem" },
     { "src": "/api/(.*)", "dest": "/api/index.ts" },
-    { "src": "/(.*)", "dest": "/api/index.ts" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
