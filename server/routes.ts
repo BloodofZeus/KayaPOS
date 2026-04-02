@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
-import { db, isRemoteHost } from "./db";
+import { db, isRemoteHost, reinitializeDb } from "./db";
 import { storage } from "./storage";
 import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -110,6 +110,30 @@ export async function registerRoutes(
       } finally {
         testPool.end().catch(() => {});
       }
+    });
+
+    app.post("/api/setup/activate-db", testDbLimiter, async (req, res) => {
+      const { url } = req.body as { url?: string };
+      if (!url || typeof url !== "string" || url.trim() === "") {
+        return res.status(400).json({ ok: false, error: "A database URL is required." });
+      }
+      const probePool = new pg.Pool({
+        connectionString: url.trim(),
+        max: 1,
+        connectionTimeoutMillis: 5000,
+        ssl: isRemoteHost(url.trim()) ? true : false,
+      });
+      try {
+        const client = await probePool.connect();
+        client.release();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Connection failed.";
+        return res.status(422).json({ ok: false, error: message });
+      } finally {
+        probePool.end().catch(() => {});
+      }
+      await reinitializeDb(url.trim());
+      return res.json({ ok: true });
     });
   }
 

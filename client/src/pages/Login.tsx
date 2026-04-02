@@ -17,6 +17,8 @@ export default function Login() {
   const [dbUrl, setDbUrl] = useState("");
   const [dbTestStatus, setDbTestStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
   const [dbTestError, setDbTestError] = useState("");
+  const [dbActivateStatus, setDbActivateStatus] = useState<"idle" | "activating" | "done" | "error">("idle");
+  const [dbActivateError, setDbActivateError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +37,8 @@ export default function Login() {
   const handleTestDb = async () => {
     setDbTestStatus("testing");
     setDbTestError("");
+    setDbActivateStatus("idle");
+    setDbActivateError("");
     try {
       const res = await fetch("/api/setup/test-db", {
         method: "POST",
@@ -51,6 +55,28 @@ export default function Login() {
     } catch {
       setDbTestStatus("error");
       setDbTestError("Could not reach the server. Make sure the app is running.");
+    }
+  };
+
+  const handleActivateDb = async () => {
+    setDbActivateStatus("activating");
+    setDbActivateError("");
+    try {
+      const res = await fetch("/api/setup/activate-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: dbUrl }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setDbActivateStatus("done");
+      } else {
+        setDbActivateStatus("error");
+        setDbActivateError(data.error || "Could not switch database.");
+      }
+    } catch {
+      setDbActivateStatus("error");
+      setDbActivateError("Could not reach the server.");
     }
   };
 
@@ -170,9 +196,44 @@ export default function Login() {
                   </Button>
 
                   {dbTestStatus === "ok" && (
-                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-xs">
-                      <CheckCircle2 className="size-4 shrink-0" />
-                      Connected successfully! Your database URL is working.
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-xs">
+                        <CheckCircle2 className="size-4 shrink-0" />
+                        Connected successfully! Your database URL is working.
+                      </div>
+
+                      {dbActivateStatus !== "done" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full"
+                          disabled={dbActivateStatus === "activating"}
+                          onClick={handleActivateDb}
+                        >
+                          {dbActivateStatus === "activating" ? (
+                            <>
+                              <Loader2 className="size-3.5 mr-2 animate-spin" />
+                              Switching…
+                            </>
+                          ) : (
+                            "Use this database"
+                          )}
+                        </Button>
+                      )}
+
+                      {dbActivateStatus === "done" && (
+                        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-xs">
+                          <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+                          <span>Database switched! You can now log in.</span>
+                        </div>
+                      )}
+
+                      {dbActivateStatus === "error" && (
+                        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-destructive/10 text-destructive text-xs">
+                          <XCircle className="size-4 shrink-0 mt-0.5" />
+                          <span>{dbActivateError}</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
