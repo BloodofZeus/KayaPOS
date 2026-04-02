@@ -51,6 +51,7 @@ export async function registerRoutes(
 
   const sessionPool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
+    max: Number(process.env.DB_POOL_MAX ?? (process.env.VERCEL ? 2 : 10)),
   });
 
   app.use(

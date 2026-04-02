@@ -57,7 +57,7 @@ DATABASE_URL=<your-production-url> npm run db:push
 
 ### 5. Deploy
 
-Vercel will automatically deploy on every push to your main branch. The build command is `npm run vercel-build` (which runs `vite build` to compile the frontend).
+Vercel will automatically deploy on every push to your main branch. The build command is `npm run vercel-build`, which runs `npm run build` — this compiles both the Vite frontend (to `dist/public`) and the Express server bundle (to `dist/index.cjs`) using `script/build.ts`.
 
 ---
 
