@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
-import { db } from "./db";
+import { db, isRemoteHost } from "./db";
 import { storage } from "./storage";
 import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -35,6 +35,14 @@ const loginLimiter = rateLimit({
   message: { error: "Too many login attempts. Please try again in 15 minutes." },
 });
 
+const testDbLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: "Too many test requests. Please wait a minute." },
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -52,6 +60,7 @@ export async function registerRoutes(
   const sessionPool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
     max: Number(process.env.DB_POOL_MAX ?? (process.env.VERCEL ? 2 : 10)),
+    ssl: process.env.DATABASE_URL && isRemoteHost(process.env.DATABASE_URL) ? true : false,
   });
 
   app.use(
@@ -74,6 +83,32 @@ export async function registerRoutes(
   );
 
   await ensureDefaultAdmin();
+
+  app.post("/api/setup/test-db", testDbLimiter, async (req, res) => {
+    const { url } = req.body as { url?: string };
+    if (!url || typeof url !== "string" || url.trim() === "") {
+      return res.status(400).json({ ok: false, error: "A database URL is required." });
+    }
+    const testPool = new pg.Pool({
+      connectionString: url.trim(),
+      max: 1,
+      connectionTimeoutMillis: 5000,
+      ssl: isRemoteHost(url.trim()) ? true : false,
+    });
+    try {
+      const client = await testPool.connect();
+      try {
+        await client.query("SELECT 1");
+        return res.json({ ok: true });
+      } finally {
+        client.release();
+      }
+    } catch (err: any) {
+      return res.json({ ok: false, error: err.message || "Connection failed." });
+    } finally {
+      testPool.end().catch(() => {});
+    }
+  });
 
   app.post("/api/auth/register", requireAuth, async (req, res) => {
     try {
@@ -252,7 +287,7 @@ export async function registerRoutes(
       if (isActive !== undefined) updateData.isActive = isActive;
       if (password) updateData.password = await bcrypt.hash(password, 10);
 
-      const updated = await storage.updateUser(req.params.id, updateData);
+      const updated = await storage.updateUser(String(req.params.id), updateData);
       if (!updated) {
         return res.status(404).json({ error: "User not found" });
       }

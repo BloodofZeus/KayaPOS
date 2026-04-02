@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Store, Loader2, AlertCircle } from "lucide-react";
+import { Store, Loader2, AlertCircle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Database } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
@@ -12,6 +12,11 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const [dbPanelOpen, setDbPanelOpen] = useState(false);
+  const [dbUrl, setDbUrl] = useState("");
+  const [dbTestStatus, setDbTestStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
+  const [dbTestError, setDbTestError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +29,28 @@ export default function Login() {
       setError(err.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTestDb = async () => {
+    setDbTestStatus("testing");
+    setDbTestError("");
+    try {
+      const res = await fetch("/api/setup/test-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: dbUrl }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setDbTestStatus("ok");
+      } else {
+        setDbTestStatus("error");
+        setDbTestError(data.error || "Connection failed.");
+      }
+    } catch {
+      setDbTestStatus("error");
+      setDbTestError("Could not reach the server. Make sure the app is running.");
     }
   };
 
@@ -89,6 +116,75 @@ export default function Login() {
                 )}
               </Button>
             </form>
+
+            <div className="mt-4 border-t pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setDbPanelOpen((v) => !v);
+                  setDbTestStatus("idle");
+                  setDbTestError("");
+                }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+              >
+                <Database className="size-3.5" />
+                Check database connection
+                {dbPanelOpen ? (
+                  <ChevronUp className="size-3.5 ml-auto" />
+                ) : (
+                  <ChevronDown className="size-3.5 ml-auto" />
+                )}
+              </button>
+
+              {dbPanelOpen && (
+                <div className="mt-3 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Paste your <code className="bg-muted px-1 rounded">DATABASE_URL</code> below to
+                    verify the connection before logging in.
+                  </p>
+                  <Input
+                    value={dbUrl}
+                    onChange={(e) => {
+                      setDbUrl(e.target.value);
+                      setDbTestStatus("idle");
+                    }}
+                    placeholder="postgresql://user:pass@host:5432/dbname"
+                    className="text-xs font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={dbTestStatus === "testing" || dbUrl.trim() === ""}
+                    onClick={handleTestDb}
+                  >
+                    {dbTestStatus === "testing" ? (
+                      <>
+                        <Loader2 className="size-3.5 mr-2 animate-spin" />
+                        Testing…
+                      </>
+                    ) : (
+                      "Test Connection"
+                    )}
+                  </Button>
+
+                  {dbTestStatus === "ok" && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-xs">
+                      <CheckCircle2 className="size-4 shrink-0" />
+                      Connected successfully! Your database URL is working.
+                    </div>
+                  )}
+
+                  {dbTestStatus === "error" && (
+                    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-destructive/10 text-destructive text-xs">
+                      <XCircle className="size-4 shrink-0 mt-0.5" />
+                      <span>{dbTestError}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
