@@ -1,0 +1,31 @@
+VERDICT: APPROVED
+The diff correctly implements both required fixes and addresses the Vercel login failure mode without introducing blocking regressions.
+
+Critical findings / analysis:
+- `server/app.ts`: `app.set("trust proxy", 1)` is now set immedVERDICT: APPROVED
+iately after app creation and before middleware/route registration. This The diff correctly implements both required fixes and addresses the Vercel login failure mode without introducing blocking regressions.
+is the correct placement for Express to honor `X-Forwarded-Pr
+oto` and allow secure session cookies behind Vercel’sCritical findings / analysis:
+ proxy.
+- `api/index.ts`: the handler body is wrapped in `try- `server/app.ts`: `app.set("trust proxy", 1)` is now set immediately after app creation and before middleware/route registration. This is the correct placement for Express to honor `X-Forwarded-Proto` and allow secure session cookies behind Vercel’s proxy.
+/catch`, and failures during app initialization (`await getApp()`) now return a structured JSON 500 response (`{"error":"Service unavailable"}`) instead of falling through to Vercel’s default HTML error page. This directly resolves the reported JSON parse issue from frontend clients.
+- The implementation is scoped to the stated objective and does not alter auth/session architecture beyond the required behavior.
+
+Security:
+- None observed at a serious/blocking level.
+- The trust proxy change is appropriate for proxied HTTPS deployments and is aligned with secure-cookie behavior.
+
+Next actions:
+1. Validate in Vercel: login flow should persist session across subsequent API requests.
+2. Simulate startup failure (e.g., unset `SESSION_SECRET` or DB down) and confirm `/api/auth/login` returns JSON 500 payload, not HTML.
+3. Optionally add a lightweight integration test for handler initialization failure response format to prevent regression.- `api/index.ts`: the handler body is wrapped in `try/catch`, and failures during app initialization (`await getApp()`) now return a structured JSON 500 response (`{"error":"Service unavailable"}`) instead of falling through to Vercel’s default HTML error page. This directly resolves the reported JSON parse issue from frontend clients.
+- The implementation is scoped to the stated objective and does not alter auth/session architecture beyond the required behavior.
+
+Security:
+- None observed at a serious/blocking level.
+- The trust proxy change is appropriate for proxied HTTPS deployments and is aligned with secure-cookie behavior.
+
+Next actions:
+1. Validate in Vercel: login flow should persist session across subsequent API requests.
+2. Simulate startup failure (e.g., unset `SESSION_SECRET` or DB down) and confirm `/api/auth/login` returns JSON 500 payload, not HTML.
+3. Optionally add a lightweight integration test for handler initialization failure response format to prevent regression.

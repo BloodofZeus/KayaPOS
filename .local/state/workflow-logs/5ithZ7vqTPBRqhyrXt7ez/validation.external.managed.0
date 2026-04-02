@@ -1,0 +1,41 @@
+VERDICT: REJECTED
+The diff makes meaningful progress toward Vercel support, but it does not fully satisfy the task requirements and introduces at least one explicitly disallowed quality issue.
+
+Critical findings / analysis:
+- **Blocking requirementVERDICT: REJECTED
+ miss: `vercel-build` script is incorrect for this task.** The task explicitly requires `vercel-build`The diff makes meaningful progress toward Vercel support, but it does not fully satisfy the task requirements and introduces at least one explicitly disallowed quality issue.
+ to run the existing full build (`npm run build`) that compiles bot
+h frontend and server outputs. The change sets `"vercel-buildCritical findings / analysis:
+": "vite build"`, which only builds the frontend.
+- **Routing behavior does not match stated objective.** `vercel.json` rewrites unmatched routes to `/index.html` instead of forwarding unmatched requests to the Express serverless function (`api/index.ts`) as specified in the task text. This is a functional divergence from the requested architecture.
+- **AI-slop policy violation in reviewed diff:** `api/index.ts` uses `req as any` / `res as any`. Per review criteria, casts to `any` used to bypass typing are a reject condition.
+
+What is good:
+- `api/index.ts` correctly memoizes app initialization for warm invocations.
+- `server/app.ts` refactor cleanly separates app construction from listener startup.
+- `server/db.ts` adds a low serverless pool cap (`2`) for Vercel.
+- Deployment docs and env var coverage are present.
+
+Security:
+- No new serious security violation observed in this diff.
+
+Next actions (high-impact):
+1. Change `package.json` to `"vercel-build": "npm run build"` (or equivalent full build command) to align with the requirement.
+2. Update `vercel.json` routing to match task intent for unmatched requests (forward to Express function) or explicitly reconcile requirement and implementation choice.
+3. Remove `as any` casts in `api/index.ts` by using proper request/response types compatible with Express handler invocation (or a typed adapter pattern).- **Blocking requirement miss: `vercel-build` script is incorrect for this task.** The task explicitly requires `vercel-build` to run the existing full build (`npm run build`) that compiles both frontend and server outputs. The change sets `"vercel-build": "vite build"`, which only builds the frontend.
+- **Routing behavior does not match stated objective.** `vercel.json` rewrites unmatched routes to `/index.html` instead of forwarding unmatched requests to the Express serverless function (`api/index.ts`) as specified in the task text. This is a functional divergence from the requested architecture.
+- **AI-slop policy violation in reviewed diff:** `api/index.ts` uses `req as any` / `res as any`. Per review criteria, casts to `any` used to bypass typing are a reject condition.
+
+What is good:
+- `api/index.ts` correctly memoizes app initialization for warm invocations.
+- `server/app.ts` refactor cleanly separates app construction from listener startup.
+- `server/db.ts` adds a low serverless pool cap (`2`) for Vercel.
+- Deployment docs and env var coverage are present.
+
+Security:
+- No new serious security violation observed in this diff.
+
+Next actions (high-impact):
+1. Change `package.json` to `"vercel-build": "npm run build"` (or equivalent full build command) to align with the requirement.
+2. Update `vercel.json` routing to match task intent for unmatched requests (forward to Express function) or explicitly reconcile requirement and implementation choice.
+3. Remove `as any` casts in `api/index.ts` by using proper request/response types compatible with Express handler invocation (or a typed adapter pattern).
