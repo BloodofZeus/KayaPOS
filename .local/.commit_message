@@ -1,0 +1,23 @@
+Task #2: Vercel Deployment Configuration (final)
+
+Complete Vercel deployment support while keeping Replit/VPS behavior unchanged.
+
+Architecture:
+- server/app.ts: shared Express app factory (createApp + log)
+- server/index.ts: traditional entry - adds Vite/static serving, binds to port 5000
+- api/index.ts: Vercel serverless entry - singleton app, calls serveStatic in production
+
+Key files:
+- vercel.json: routes with handle:filesystem (CDN for static assets, Express for API + SPA fallback)
+- server/db.ts: DB pool capped at 2 on Vercel (VERCEL=1), configurable via DB_POOL_MAX
+- server/routes.ts: session pool also capped consistently with app DB pool on Vercel
+- server/static.ts: VERCEL-aware distPath (__dirname/../dist/public on Vercel)
+- package.json: vercel-build = npm run build (full build: Vite + esbuild server bundle)
+- DEPLOYMENT.md: full step-by-step Vercel guide with env vars, troubleshooting, build notes
+
+Post-review fixes:
+1. vercel-build now runs npm run build (not just vite build)
+2. Unmatched routes forwarded to Express via routes + handle:filesystem (not /index.html directly)
+3. Removed as any casts - uses typed NodeHandler alias with as unknown as
+4. Session pool in routes.ts now respects DB_POOL_MAX / Vercel cap (was uncapped at 10)
+5. DEPLOYMENT.md corrected to describe actual build process (script/build.ts)
