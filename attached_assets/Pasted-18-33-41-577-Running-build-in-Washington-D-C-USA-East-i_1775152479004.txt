@@ -1,0 +1,85 @@
+18:33:41.577 Running build in Washington, D.C., USA (East) – iad1
+18:33:41.578 Build machine configuration: 2 cores, 8 GB
+18:33:41.589 Cloning github.com/BloodofZeus/KayaPOS (Branch: main, Commit: a107406)
+18:33:41.590 Skipping build cache, deployment was triggered without cache.
+18:33:42.038 Cloning completed: 448.000ms
+18:33:42.384 Running "vercel build"
+18:33:43.054 Vercel CLI 50.38.2
+18:33:43.927 Installing dependencies...
+18:33:47.571 npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+18:33:47.580 npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+18:33:53.820 
+18:33:53.821 added 389 packages in 10s
+18:33:53.822 
+18:33:53.822 53 packages are looking for funding
+18:33:53.822   run `npm fund` for details
+18:33:53.991 
+18:33:53.992 > rest-express@1.0.0 vercel-build
+18:33:53.992 > npm run build
+18:33:53.992 
+18:33:54.095 
+18:33:54.096 > rest-express@1.0.0 build
+18:33:54.096 > tsx script/build.ts
+18:33:54.096 
+18:33:54.872 building client...
+18:33:55.065 [36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+18:33:55.340 transforming...
+18:34:01.138 [32m✓[39m 2800 modules transformed.
+18:34:02.150 rendering chunks...
+18:34:02.170 [meta-images] no Replit deployment domain found, skipping meta tag updates
+18:34:02.194 computing gzip size...
+18:34:02.224 [2m../dist/public/[22m[32mindex.html                 [39m[1m[2m    1.65 kB[22m[1m[22m[2m │ gzip:   0.66 kB[22m
+18:34:02.225 [2m../dist/public/[22m[2massets/[22m[35mindex-BUvTuSGv.css  [39m[1m[2m  114.24 kB[22m[1m[22m[2m │ gzip:  18.43 kB[22m
+18:34:02.226 [2m../dist/public/[22m[2massets/[22m[36mindex-C1aPSh5n.js   [39m[1m[33m1,085.38 kB[39m[22m[2m │ gzip: 317.32 kB[22m
+18:34:02.226 [32m✓ built in 6.92s[39m
+18:34:02.226 [33m
+18:34:02.226 (!) Some chunks are larger than 500 kB after minification. Consider:
+18:34:02.226 - Using dynamic import() to code-split the application
+18:34:02.226 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+18:34:02.226 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+18:34:02.227 building server...
+18:34:02.442 
+18:34:02.442   dist/index.cjs  1.1mb ⚠️
+18:34:02.442 
+18:34:02.442 ⚡ Done in 204ms
+18:34:02.568 Running "npm run vercel-build"
+18:34:02.673 
+18:34:02.674 > rest-express@1.0.0 vercel-build
+18:34:02.674 > npm run build
+18:34:02.674 
+18:34:02.782 
+18:34:02.782 > rest-express@1.0.0 build
+18:34:02.782 > tsx script/build.ts
+18:34:02.782 
+18:34:03.529 building client...
+18:34:03.712 [36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+18:34:03.949 transforming...
+18:34:09.545 [32m✓[39m 2800 modules transformed.
+18:34:10.526 rendering chunks...
+18:34:10.536 [meta-images] no Replit deployment domain found, skipping meta tag updates
+18:34:10.543 computing gzip size...
+18:34:10.574 [2m../dist/public/[22m[32mindex.html                 [39m[1m[2m    1.65 kB[22m[1m[22m[2m │ gzip:   0.66 kB[22m
+18:34:10.574 [2m../dist/public/[22m[2massets/[22m[35mindex-BUvTuSGv.css  [39m[1m[2m  114.24 kB[22m[1m[22m[2m │ gzip:  18.43 kB[22m
+18:34:10.575 [2m../dist/public/[22m[2massets/[22m[36mindex-C1aPSh5n.js   [39m[1m[33m1,085.38 kB[39m[22m[2m │ gzip: 317.32 kB[22m
+18:34:10.575 [32m✓ built in 6.66s[39m
+18:34:10.575 building server...
+18:34:10.576 [33m
+18:34:10.576 (!) Some chunks are larger than 500 kB after minification. Consider:
+18:34:10.578 - Using dynamic import() to code-split the application
+18:34:10.578 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+18:34:10.578 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+18:34:10.758 
+18:34:10.759   dist/index.cjs  1.1mb ⚠️
+18:34:10.759 
+18:34:10.761 ⚡ Done in 170ms
+18:34:11.067 Using TypeScript 5.6.3 (local user-provided)
+18:34:17.721 server/routes.ts(255,48): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
+18:34:17.722   Type 'string[]' is not assignable to type 'string'.
+18:34:17.722 
+18:34:22.308 Build Completed in /vercel/output [38s]
+18:34:22.435 Deploying outputs...
+18:34:27.405 Deployment completed
+18:34:28.420 Creating build cache...
+18:34:48.184 Created build cache: 20s
+18:34:48.185 Uploading build cache [63.45 MB]
+18:34:49.178 Build cache uploaded: 1.003s
