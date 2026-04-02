@@ -424,6 +424,9 @@ export async function registerRoutes(
   app.post("/api/sync/business-settings", requireAuth, async (req, res) => {
     try {
       const settings = req.body;
+      if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+        return res.status(400).json({ error: "Expected a settings object" });
+      }
       const existing = await db.select().from(syncedBusinessSettings).limit(1);
       if (existing.length > 0) {
         await db.update(syncedBusinessSettings).set({
