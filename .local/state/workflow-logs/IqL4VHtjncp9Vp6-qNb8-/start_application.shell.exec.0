@@ -13,6 +13,7 @@
 6:37:52 PM [express] GET /api/auth/me 401 in 2ms :: {"error":"Not authenticated"}
 6:37:54 PM [express] GET /api/auth/me 401 in 1ms :: {"error":"Not authenticated"}
 6:37:58 PM [express] GET /api/auth/me 401 in 0ms :: {"error":"Not authenticated"}
+<<<<<<< HEAD
 (node:9516) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
 In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
 
@@ -47,3 +48,5 @@ See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode de
 
 
 [1;1H[0J[2m6:52:31 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Login.tsx, /src/index.css[22m
+=======
+>>>>>>> 9afd06c2bd9cab30ec5e526b9f1dd1a12cca359b
