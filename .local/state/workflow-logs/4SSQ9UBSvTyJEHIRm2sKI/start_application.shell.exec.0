@@ -1,0 +1,15 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K
+========================================================
+  SECURITY WARNING: Admin account still uses the
+  default password 'admin123'.
+  CHANGE THIS PASSWORD before going to production!
+========================================================
+
+6:06:15 PM [express] serving on port 5000
+6:06:20 PM [express] GET /api/auth/me 401 in 2ms :: {"error":"Not authenticated"}
+6:06:23 PM [express] GET /api/auth/me 304 in 6ms :: {"id":"145d987d-6a18-4fb9-ae6f-d748f49501dd","username":"admin","fullName":"Administrator","role":"admin","isActive":true}
+6:06:28 PM [express] GET /api/auth/me 401 in 1ms :: {"error":"Not authenticated"}

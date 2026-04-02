@@ -1,0 +1,19 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K/home/runner/workspace/server/app.ts:31
+  const migrationsFolder = path.resolve(__dirname, "..", "migrations");
+                                        ^
+
+
+ReferenceError: __dirname is not defined
+    at createApp [90m(/home/runner/workspace/[39mserver/app.ts:31:41[90m)[39m
+    at <anonymous> [90m(/home/runner/workspace/[39mserver/index.ts:5:37[90m)[39m
+    at <anonymous> [90m(/home/runner/workspace/[39mserver/index.ts:25:1[90m)[39m
+[90m    at ModuleJob.run (node:internal/modules/esm/module_job:325:25)[39m
+[90m    at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)[39m
+[90m    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)[39m
+
+Node.js v20.20.0
+[1G[0K⠙[1G[0K
