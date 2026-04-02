@@ -1,5 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { db } from "./db";
 import { registerRoutes } from "./routes";
 
 declare module "http" {
@@ -24,6 +26,8 @@ export async function createApp() {
   const httpServer = createServer(app);
 
   app.set("trust proxy", 1);
+
+  await migrate(db, { migrationsFolder: "migrations" });
 
   app.use(
     express.json({

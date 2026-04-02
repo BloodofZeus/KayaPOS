@@ -5,7 +5,7 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 30,
-      "includeFiles": "dist/public/**"
+      "includeFiles": ["dist/public/**", "migrations/**"]
     }
   },
   "routes": [

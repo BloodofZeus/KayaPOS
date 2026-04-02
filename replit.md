@@ -47,8 +47,12 @@ The server (`server/index.ts`) runs on port 5000 and serves both the API and the
 ```bash
 npm run dev       # Start dev server on port 5000
 npm run build     # Build for production
-npm run db:push   # Sync database schema
+npm run db:push   # Sync schema (dev only; production uses auto-migrate)
 ```
+
+The app runs Drizzle migrations automatically on every startup (`migrations/` directory).
+On a fresh database all tables are created; on subsequent starts it is a no-op.
+To add schema changes: edit `shared/schema.ts`, run `npx drizzle-kit generate`, then commit the new migration file.
 
 ## Default Admin Credentials
 
