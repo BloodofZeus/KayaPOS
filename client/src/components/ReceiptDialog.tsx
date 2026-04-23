@@ -162,7 +162,7 @@ export default function ReceiptDialog({ open, onClose, order, business }: Receip
               <p className="font-medium">Thank you for your patronage!</p>
               <p>Goods sold in good condition are not returnable.</p>
               {business?.businessName && <p className="font-semibold">{business.businessName}</p>}
-              <p className="text-[10px] mt-1 opacity-50">Powered by Kaya POS</p>
+              <p className="text-[10px] mt-1 opacity-50">Powered by Shawama Boss</p>
             </div>
 
           </div>

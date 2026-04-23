@@ -103,7 +103,7 @@ export default function Login() {
           <div className="size-16 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground mb-4 shadow-lg">
             <Store className="size-8" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Kaya POS</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Shawama Boss</h1>
           <p className="text-muted-foreground mt-1">Sign in to your account</p>
         </div>
 

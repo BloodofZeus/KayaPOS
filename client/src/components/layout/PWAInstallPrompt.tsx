@@ -35,7 +35,7 @@ export default function PWAInstallPrompt() {
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300 max-w-sm">
       <Download className="size-5 shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="font-bold text-sm">Install Kaya POS</div>
+        <div className="font-bold text-sm">Install Shawama Boss</div>
         <div className="text-xs opacity-80">Use offline with full functionality</div>
       </div>
       <Button size="sm" variant="secondary" onClick={handleInstall} className="shrink-0">

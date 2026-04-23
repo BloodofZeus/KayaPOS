@@ -30,9 +30,12 @@ function initDb(): DrizzleDB {
   if (!_db) {
     const url = process.env.DATABASE_URL;
     if (!url) {
-      throw new Error(
-        "DATABASE_URL is not configured. Set this environment variable in your deployment settings and restart."
-      );
+      // Return a proxy that throws error only when called, to avoid crashing during initialization
+      return new Proxy({} as DrizzleDB, {
+        get() {
+          throw new Error("DATABASE_URL is not configured.");
+        }
+      });
     }
     _pool = buildPool(url);
     _db = drizzle(_pool, { schema });

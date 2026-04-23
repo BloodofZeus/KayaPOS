@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const businessSettings = useLiveQuery(() => db.businessSettings.toCollection().first());
-  const businessName = businessSettings?.businessName || "Kaya POS";
+  const businessName = businessSettings?.businessName || "Shawama Boss";
 
   const allNavigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["admin", "manager", "cashier"] },
