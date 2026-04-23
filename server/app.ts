@@ -22,17 +22,30 @@ export function log(message: string, source = "express") {
 }
 
 export async function createApp() {
+  log("[app] Starting createApp...");
   const app = express();
   const httpServer = createServer(app);
 
   app.set("trust proxy", 1);
 
   if (process.env.DATABASE_URL) {
+    log("[app] DATABASE_URL found, initializing database...");
     // Initialize DB instance
-    await initDb();
-    
-    // Run migrations in background on Vercel to avoid cold start timeout
+    try {
+      await initDb();
+      log("[app] Database initialized successfully.");
+    } catch (dbErr: any) {
+      log(`[app] Database initialization failed: ${dbErr.message}`, "error");
+      // Don't rethrow here, let the app try to start so we can see the error in logs
+    }
     const runMigrations = async () => {
+      // On Vercel, we skip auto-migrations to avoid cold start timeouts 
+      // and mismatch between node-postgres/neon-http drivers.
+      if (process.env.VERCEL) {
+        log("[app] Skipping auto-migration on Vercel. Use 'npm run db:push' locally instead.");
+        return;
+      }
+
       try {
         // Try to find migrations in common locations
         const possiblePaths = [
@@ -52,9 +65,9 @@ export async function createApp() {
 
         if (migrationsFolder) {
           log(`[app] Running migrations from ${migrationsFolder}...`);
-          // Use dynamic import for migrate to avoid loading it if not needed immediately
+          // Use dynamic import for migrate
           const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-          await migrate(db, { migrationsFolder });
+          await migrate(db as any, { migrationsFolder });
           log("[app] Migrations completed successfully.");
         } else {
           log("[app] Could not find migrations folder — skipping auto-migration.", "warn");
@@ -65,10 +78,8 @@ export async function createApp() {
     };
 
     if (process.env.VERCEL) {
-      // Don't even await the promise of starting the migration
-      setTimeout(() => {
-        runMigrations().catch(err => log(`[app] Background migration failed: ${err.message}`, "error"));
-      }, 0);
+      // On Vercel, runMigrations() now returns immediately
+      runMigrations();
     } else {
       await runMigrations();
     }

@@ -24,6 +24,14 @@ export default async function handler(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
+  // Simple health check to verify the function is alive
+  if (req.url === "/api/health") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }));
+    return;
+  }
+
   try {
     console.log(`[handler] Incoming request: ${req.method} ${req.url}`);
     const app = await getApp();
