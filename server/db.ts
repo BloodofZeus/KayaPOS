@@ -1,14 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import pg from "pg";
-import { Pool, neonConfig } from "@neondatabase/serverless";
+import { neon } from "@neondatabase/serverless";
 import * as schema from "@shared/schema";
-import ws from "ws";
-
-// For Neon serverless
-if (process.env.VERCEL) {
-  neonConfig.webSocketConstructor = ws;
-}
 
 export function isRemoteHost(url: string): boolean {
   return !url.includes("localhost") && !url.includes("127.0.0.1");
@@ -16,58 +10,57 @@ export function isRemoteHost(url: string): boolean {
 
 function maxConns(): number {
   return process.env.VERCEL
-    ? 2
+    ? 1
     : parseInt(process.env.DB_POOL_MAX || "10", 10);
 }
 
-export function buildPool(url: string): pg.Pool | Pool {
+export function buildPool(url: string): pg.Pool {
   const isRemote = isRemoteHost(url);
-  const config = {
+  return new pg.Pool({
     connectionString: url,
     max: maxConns(),
     ssl: isRemote ? { rejectUnauthorized: false } : false,
-  };
-  return process.env.VERCEL ? new Pool(config) : new pg.Pool(config);
+    connectionTimeoutMillis: 5000,
+  });
 }
 
-type DrizzleDB = ReturnType<typeof drizzle<typeof schema>>;
-
-let _pool: pg.Pool | Pool | null = null;
 let _db: any | null = null;
 
-function initDb(): DrizzleDB {
+function initDb(): any {
   if (!_db) {
     const url = process.env.DATABASE_URL;
     if (!url) {
-      // Return a proxy that throws error only when called, to avoid crashing during initialization
-      return new Proxy({} as DrizzleDB, {
+      return new Proxy({} as any, {
         get() {
           throw new Error("DATABASE_URL is not configured.");
         }
       });
     }
-    _pool = buildPool(url);
-    _db = process.env.VERCEL 
-      ? drizzleNeon(_pool as Pool, { schema })
-      : drizzle(_pool as pg.Pool, { schema });
+
+    if (process.env.VERCEL) {
+      const sql = neon(url);
+      _db = drizzleNeon(sql, { schema });
+    } else {
+      const pool = buildPool(url);
+      _db = drizzle(pool, { schema });
+    }
   }
   return _db;
 }
 
-export const db: DrizzleDB = new Proxy({} as DrizzleDB, {
+export const db: any = new Proxy({} as any, {
   get(_target, prop: string | symbol) {
     return (initDb() as any)[prop];
   },
 });
 
 export async function reinitializeDb(url: string): Promise<void> {
-  const oldPool = _pool;
-  _pool = buildPool(url);
-  _db = process.env.VERCEL 
-    ? drizzleNeon(_pool as Pool, { schema })
-    : drizzle(_pool as pg.Pool, { schema });
-  process.env.DATABASE_URL = url;
-  if (oldPool) {
-    (oldPool as any).end().catch(() => {});
+  if (process.env.VERCEL) {
+    const sql = neon(url);
+    _db = drizzleNeon(sql, { schema });
+  } else {
+    const pool = buildPool(url);
+    _db = drizzle(pool, { schema });
   }
+  process.env.DATABASE_URL = url;
 }

@@ -96,13 +96,9 @@ export async function registerRoutes(
   );
 
   if (dbUrl) {
-    // Only run ensureDefaultAdmin if we're not on Vercel or if explicitly requested
-    // On Vercel, this can cause cold start timeouts
+    // Only run ensureDefaultAdmin if we're not on Vercel
     if (!process.env.VERCEL) {
       await ensureDefaultAdmin();
-    } else {
-      // Run it in the background on Vercel
-      ensureDefaultAdmin().catch(err => console.error("Background admin check failed:", err));
     }
   } else {
     console.warn("DATABASE_URL not set — skipping default admin check.");
@@ -114,9 +110,23 @@ export async function registerRoutes(
       if (!url || typeof url !== "string" || url.trim() === "") {
         return res.status(400).json({ ok: false, error: "A database URL is required." });
       }
-      const testPool = buildPool(url.trim());
+
+      const trimmedUrl = url.trim();
+
+      if (process.env.VERCEL && isRemoteHost(trimmedUrl)) {
+        try {
+          const { neon } = await import("@neondatabase/serverless");
+          const sql = neon(trimmedUrl);
+          await sql`SELECT 1`;
+          return res.json({ ok: true });
+        } catch (err: any) {
+          return res.status(422).json({ ok: false, error: err.message });
+        }
+      }
+
+      const testPool = buildPool(trimmedUrl);
       try {
-        const client = await (testPool as any).connect();
+        const client = await testPool.connect();
         try {
           await client.query("SELECT 1");
           return res.json({ ok: true });
@@ -127,7 +137,7 @@ export async function registerRoutes(
         const message = err instanceof Error ? err.message : "Connection failed.";
         return res.status(422).json({ ok: false, error: message });
       } finally {
-        (testPool as any).end().catch(() => {});
+        testPool.end().catch(() => {});
       }
     });
 
@@ -136,17 +146,31 @@ export async function registerRoutes(
       if (!url || typeof url !== "string" || url.trim() === "") {
         return res.status(400).json({ ok: false, error: "A database URL is required." });
       }
-      const probePool = buildPool(url.trim());
-      try {
-        const client = await (probePool as any).connect();
-        client.release();
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Connection failed.";
-        return res.status(422).json({ ok: false, error: message });
-      } finally {
-        (probePool as any).end().catch(() => {});
+
+      const trimmedUrl = url.trim();
+
+      if (process.env.VERCEL && isRemoteHost(trimmedUrl)) {
+        try {
+          const { neon } = await import("@neondatabase/serverless");
+          const sql = neon(trimmedUrl);
+          await sql`SELECT 1`;
+        } catch (err: any) {
+          return res.status(422).json({ ok: false, error: err.message });
+        }
+      } else {
+        const probePool = buildPool(trimmedUrl);
+        try {
+          const client = await probePool.connect();
+          client.release();
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : "Connection failed.";
+          return res.status(422).json({ ok: false, error: message });
+        } finally {
+          probePool.end().catch(() => {});
+        }
       }
-      await reinitializeDb(url.trim());
+      
+      await reinitializeDb(trimmedUrl);
       return res.json({ ok: true });
     });
   }
@@ -199,7 +223,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Username and password are required" });
       }
 
-      const user = await storage.getUserByUsername(username);
+      let user = await storage.getUserByUsername(username);
+      
+      // Lazy admin creation if database is empty
+      if (!user && username === "admin") {
+        await ensureDefaultAdmin();
+        user = await storage.getUserByUsername("admin");
+      }
+
       if (!user) {
         return res.status(401).json({ error: "Invalid username or password" });
       }

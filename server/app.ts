@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { db } from "./db";
 import { registerRoutes } from "./routes";
 import path from "path";
@@ -50,6 +49,8 @@ export async function createApp() {
 
         if (migrationsFolder) {
           log(`[app] Running migrations from ${migrationsFolder}...`);
+          // Use dynamic import for migrate to avoid loading it if not needed immediately
+          const { migrate } = await import("drizzle-orm/node-postgres/migrator");
           await migrate(db, { migrationsFolder });
           log("[app] Migrations completed successfully.");
         } else {
@@ -61,7 +62,10 @@ export async function createApp() {
     };
 
     if (process.env.VERCEL) {
-      runMigrations().catch(err => log(`[app] Background migration failed: ${err.message}`, "error"));
+      // Don't even await the promise of starting the migration
+      setTimeout(() => {
+        runMigrations().catch(err => log(`[app] Background migration failed: ${err.message}`, "error"));
+      }, 0);
     } else {
       await runMigrations();
     }
