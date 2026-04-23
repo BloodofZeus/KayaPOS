@@ -38,6 +38,7 @@ function initDb(): AppDatabase {
   if (!_db) {
     const url = process.env.DATABASE_URL;
     if (!url) {
+      console.error("[db] DATABASE_URL environment variable is missing!");
       return new Proxy({} as any, {
         get() {
           throw new Error("DATABASE_URL is not configured.");
@@ -46,9 +47,11 @@ function initDb(): AppDatabase {
     }
 
     if (process.env.VERCEL) {
+      console.log("[db] Initializing Neon HTTP database client for Vercel...");
       const sql = neon(url);
       _db = drizzleNeon(sql, { schema });
     } else {
+      console.log("[db] Initializing Node-Postgres database client for local/VPS...");
       const { drizzle } = require("drizzle-orm/node-postgres");
       const pool = buildPool(url);
       _db = drizzle(pool, { schema });

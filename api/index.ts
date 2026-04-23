@@ -10,7 +10,9 @@ let appInstance: Express | undefined;
 async function getApp(): Promise<Express> {
   if (!appInstance) {
     const { app } = await createApp();
-    if (process.env.NODE_ENV === "production") {
+    // On Vercel, static files are handled by the platform's own static serving (vercel.json)
+    // and don't need to be served from the serverless function, which reduces cold start times.
+    if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
       serveStatic(app);
     }
     appInstance = app;
@@ -31,9 +33,10 @@ export default async function handler(
       ok: false,
       error: "Internal Server Error",
       message: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
+      stack: process.env.NODE_ENV === "development" ? (err instanceof Error ? err.stack : undefined) : undefined,
       timestamp: new Date().toISOString(),
       env: process.env.NODE_ENV,
+      isVercel: !!process.env.VERCEL,
       hasDbUrl: !!process.env.DATABASE_URL,
     };
     

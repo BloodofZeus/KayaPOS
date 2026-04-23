@@ -15,7 +15,11 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  app.get("*", (_req, res) => {
+  app.get("*", (req, res, next) => {
+    // Don't intercept API calls with index.html
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

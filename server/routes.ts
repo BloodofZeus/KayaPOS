@@ -116,7 +116,7 @@ export async function registerRoutes(
 
       if (isVercel && isRemoteHost(trimmedUrl)) {
         try {
-          const { neon } = require("@neondatabase/serverless");
+          const { neon } = await import("@neondatabase/serverless");
           const sql = neon(trimmedUrl);
           await sql`SELECT 1`;
           return res.json({ ok: true });
@@ -152,7 +152,7 @@ export async function registerRoutes(
 
       if (isVercel && isRemoteHost(trimmedUrl)) {
         try {
-          const { neon } = require("@neondatabase/serverless");
+          const { neon } = await import("@neondatabase/serverless");
           const sql = neon(trimmedUrl);
           await sql`SELECT 1`;
         } catch (err: any) {
