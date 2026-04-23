@@ -1,0 +1,103 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K
+========================================================
+  SECURITY WARNING: Admin account still uses the
+  default password 'admin123'.
+  CHANGE THIS PASSWORD before going to production!
+========================================================
+
+6:06:15 PM [express] serving on port 5000
+6:06:20 PM [express] GET /api/auth/me 401 in 2ms :: {"error":"Not authenticated"}
+6:06:23 PM [express] GET /api/auth/me 304 in 6ms :: {"id":"145d987d-6a18-4fb9-ae6f-d748f49501dd","username":"admin","fullName":"Administrator","role":"admin","isActive":true}
+6:06:28 PM [express] GET /api/auth/me 401 in 1ms :: {"error":"Not authenticated"}
+6:09:28 PM [express] GET /api/admin/users 304 in 50ms :: [{"id":"145d987d-6a18-4fb9-ae6f-d748f49501dd","username":"admin","fullName":"Administrator","role":"admin","isActive":true,"createdAt":"2026-04-02T14:28:08.895Z"}]
+6:09:32 PM [express] POST /api/auth/logout 200 in 7ms :: {"success":true}
+6:21:30 PM [express] POST /api/setup/test-db 200 in 29ms :: {"ok":false,"error":"getaddrinfo ENOTFOUND db.trrqbalbkoqnkhggddor.supabase.co"}
+6:22:19 PM [express] POST /api/setup/test-db 200 in 27ms :: {"ok":false,"error":"getaddrinfo ENOTFOUND db.trrqbalbkoqnkhggddor.supabase.co"}
+6:22:43 PM [express] POST /api/setup/test-db 200 in 13ms :: {"ok":false,"error":"getaddrinfo ENOTFOUND db.trrqbalbkoqnkhggddor.supabase.co"}
+6:23:53 PM [express] POST /api/setup/test-db 200 in 42ms :: {"ok":false,"error":"getaddrinfo ENOTFOUND db.trrqbalbkoqnkhggddor.supabase.co"}
+(node:8005) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+6:28:19 PM [express] POST /api/setup/test-db 200 in 561ms :: {"ok":true}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m6:36:57 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Login.tsx, /src/index.css[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m6:37:07 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Login.tsx, /src/index.css[22m [33m(x2)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m6:37:19 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Login.tsx, /src/index.css[22m [33m(x3)[39m
