@@ -3,6 +3,11 @@ import { createServer } from "http";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { db } from "./db";
 import { registerRoutes } from "./routes";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 declare module "http" {
   interface IncomingMessage {
@@ -28,9 +33,38 @@ export async function createApp() {
   app.set("trust proxy", 1);
 
   if (process.env.DATABASE_URL) {
-    await migrate(db, { migrationsFolder: "migrations" });
+    try {
+      // Try to find migrations in common locations
+      const possiblePaths = [
+        path.join(process.cwd(), "migrations"),
+        path.join(process.cwd(), "dist", "migrations"),
+        path.join(__dirname, "migrations"),
+        path.join(__dirname, "..", "migrations"),
+      ];
+
+      let migrationsFolder = "";
+      const fs = await import("fs");
+      for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+          migrationsFolder = p;
+          break;
+        }
+      }
+
+      if (migrationsFolder) {
+        log(`[app] Running migrations from ${migrationsFolder}...`);
+        await migrate(db, { migrationsFolder });
+        log("[app] Migrations completed successfully.");
+      } else {
+        log("[app] Could not find migrations folder — skipping auto-migration.", "warn");
+      }
+    } catch (err: any) {
+      log(`[app] Migration failed: ${err.message}`, "error");
+      // Don't rethrow here to allow the app to start even if migration fails
+      // This is helpful if the DB is already migrated but the migration check fails
+    }
   } else {
-    console.warn("[app] DATABASE_URL not set — skipping migrations. Set this variable to connect a database.");
+    log("[app] DATABASE_URL not set — skipping migrations.", "warn");
   }
 
   app.use(

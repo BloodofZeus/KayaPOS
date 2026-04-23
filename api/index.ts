@@ -66,7 +66,7 @@ async function handleSetupEndpoints(
     connectionString: dbUrl,
     max: 1,
     connectionTimeoutMillis: 5000,
-    ssl: isRemoteHost(dbUrl) ? true : false,
+    ssl: isRemoteHost(dbUrl) ? { rejectUnauthorized: false } : false,
   });
 
   try {

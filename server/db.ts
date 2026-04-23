@@ -13,10 +13,11 @@ function maxConns(): number {
 }
 
 function buildPool(url: string): pg.Pool {
+  const isRemote = isRemoteHost(url);
   return new pg.Pool({
     connectionString: url,
     max: maxConns(),
-    ssl: isRemoteHost(url) ? true : false,
+    ssl: isRemote ? { rejectUnauthorized: false } : false,
   });
 }
 

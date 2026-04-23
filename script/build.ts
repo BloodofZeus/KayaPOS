@@ -1,6 +1,7 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile } from "fs/promises";
+import { rm, readFile, mkdir, cp } from "fs/promises";
+import path from "path";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -39,6 +40,15 @@ async function buildAll() {
   await viteBuild();
 
   console.log("building server...");
+
+  // Ensure migrations folder is copied to dist
+  try {
+    await cp("migrations", "dist/migrations", { recursive: true });
+    console.log("copied migrations to dist/migrations");
+  } catch (err) {
+    console.warn("could not copy migrations folder:", err);
+  }
+
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));
   const allDeps = [
     ...Object.keys(pkg.dependencies || {}),

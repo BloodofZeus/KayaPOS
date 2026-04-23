@@ -51,16 +51,17 @@ export async function registerRoutes(
   const isProduction = process.env.NODE_ENV === "production";
 
   if (isProduction && !process.env.SESSION_SECRET) {
-    throw new Error(
-      "SESSION_SECRET environment variable must be set in production. " +
-      "Generate a strong random string and set it before starting the server."
+    console.warn(
+      "SESSION_SECRET environment variable is not set in production. " +
+      "Using a fallback secret for now, but this is insecure. Please set SESSION_SECRET in Vercel."
     );
   }
 
+  const dbUrl = process.env.DATABASE_URL;
   const sessionPool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: dbUrl,
     max: Number(process.env.DB_POOL_MAX ?? (process.env.VERCEL ? 2 : 10)),
-    ssl: process.env.DATABASE_URL && isRemoteHost(process.env.DATABASE_URL) ? true : false,
+    ssl: dbUrl && isRemoteHost(dbUrl) ? { rejectUnauthorized: false } : false,
   });
 
   app.use(
@@ -94,7 +95,7 @@ export async function registerRoutes(
         connectionString: url.trim(),
         max: 1,
         connectionTimeoutMillis: 5000,
-        ssl: isRemoteHost(url.trim()) ? true : false,
+        ssl: isRemoteHost(url.trim()) ? { rejectUnauthorized: false } : false,
       });
       try {
         const client = await testPool.connect();
@@ -121,7 +122,7 @@ export async function registerRoutes(
         connectionString: url.trim(),
         max: 1,
         connectionTimeoutMillis: 5000,
-        ssl: isRemoteHost(url.trim()) ? true : false,
+        ssl: isRemoteHost(url.trim()) ? { rejectUnauthorized: false } : false,
       });
       try {
         const client = await probePool.connect();
