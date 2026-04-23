@@ -65,12 +65,12 @@ export async function registerRoutes(
     const sessionPool = buildPool(dbUrl);
 
     sessionStore = new PgSession({
-      pool: sessionPool as any,
+      pool: sessionPool,
       tableName: "sessions",
       createTableIfMissing: false,
     });
     
-    (sessionPool as any).on('error', (err: any) => {
+    sessionPool.on('error', (err: Error) => {
       console.error('Session Pool Error:', err);
     });
   } else {
@@ -127,7 +127,7 @@ export async function registerRoutes(
 
       const testPool = buildPool(trimmedUrl);
       try {
-        const client = await (testPool as any).connect();
+        const client = await testPool.connect();
         try {
           await client.query("SELECT 1");
           return res.json({ ok: true });
@@ -138,7 +138,7 @@ export async function registerRoutes(
         const message = err instanceof Error ? err.message : "Connection failed.";
         return res.status(422).json({ ok: false, error: message });
       } finally {
-        (testPool as any).end().catch(() => {});
+        testPool.end().catch(() => {});
       }
     });
 
@@ -161,13 +161,13 @@ export async function registerRoutes(
       } else {
         const probePool = buildPool(trimmedUrl);
         try {
-          const client = await (probePool as any).connect();
+          const client = await probePool.connect();
           client.release();
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : "Connection failed.";
           return res.status(422).json({ ok: false, error: message });
         } finally {
-          (probePool as any).end().catch(() => {});
+          probePool.end().catch(() => {});
         }
       }
       

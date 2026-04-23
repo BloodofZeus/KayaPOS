@@ -1,6 +1,11 @@
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import * as schema from "@shared/schema";
+import type { Pool } from "pg";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+
+export type AppDatabase = NodePgDatabase<typeof schema> | NeonHttpDatabase<typeof schema>;
 
 export function isRemoteHost(url: string): boolean {
   return !url.includes("localhost") && !url.includes("127.0.0.1");
@@ -12,7 +17,7 @@ function maxConns(): number {
     : parseInt(process.env.DB_POOL_MAX || "10", 10);
 }
 
-export function buildPool(url: string): any {
+export function buildPool(url: string): Pool {
   const isRemote = isRemoteHost(url);
   // We only import 'pg' here to avoid loading it at the top level
   // which causes issues on some serverless platforms
@@ -25,9 +30,9 @@ export function buildPool(url: string): any {
   });
 }
 
-let _db: any | null = null;
+let _db: AppDatabase | null = null;
 
-function initDb(): any {
+function initDb(): AppDatabase {
   if (!_db) {
     const url = process.env.DATABASE_URL;
     if (!url) {
@@ -35,7 +40,7 @@ function initDb(): any {
         get() {
           throw new Error("DATABASE_URL is not configured.");
         }
-      });
+      }) as unknown as AppDatabase;
     }
 
     if (process.env.VERCEL) {
@@ -47,10 +52,10 @@ function initDb(): any {
       _db = drizzle(pool, { schema });
     }
   }
-  return _db;
+  return _db!;
 }
 
-export const db: any = new Proxy({} as any, {
+export const db: AppDatabase = new Proxy({} as any, {
   get(_target, prop: string | symbol) {
     return (initDb() as any)[prop];
   },
@@ -61,6 +66,7 @@ export async function reinitializeDb(url: string): Promise<void> {
     const sql = neon(url);
     _db = drizzleNeon(sql, { schema });
   } else {
+    const { drizzle } = require("drizzle-orm/node-postgres");
     const pool = buildPool(url);
     _db = drizzle(pool, { schema });
   }
