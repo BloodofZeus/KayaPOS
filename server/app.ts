@@ -29,36 +29,41 @@ export async function createApp() {
   app.set("trust proxy", 1);
 
   if (process.env.DATABASE_URL) {
-    try {
-      // Try to find migrations in common locations
-      const possiblePaths = [
-        path.join(process.cwd(), "migrations"),
-        path.join(process.cwd(), "dist", "migrations"),
-        path.join(process.cwd(), "server", "migrations"),
-      ];
+    // Run migrations in background on Vercel to avoid cold start timeout
+    const runMigrations = async () => {
+      try {
+        // Try to find migrations in common locations
+        const possiblePaths = [
+          path.join(process.cwd(), "migrations"),
+          path.join(process.cwd(), "dist", "migrations"),
+          path.join(process.cwd(), "server", "migrations"),
+        ];
 
-      let migrationsFolder = "";
-      const fs = await import("fs");
-      for (const p of possiblePaths) {
-        if (fs.existsSync(p)) {
-          migrationsFolder = p;
-          break;
+        let migrationsFolder = "";
+        const fs = await import("fs");
+        for (const p of possiblePaths) {
+          if (fs.existsSync(p)) {
+            migrationsFolder = p;
+            break;
+          }
         }
-      }
 
-      if (migrationsFolder) {
-        log(`[app] Running migrations from ${migrationsFolder}...`);
-        // On Vercel, we might want to avoid blocking the main thread for too long
-        // but for now let's just keep it and add a timeout if possible
-        await migrate(db, { migrationsFolder });
-        log("[app] Migrations completed successfully.");
-      } else {
-        log("[app] Could not find migrations folder — skipping auto-migration.", "warn");
+        if (migrationsFolder) {
+          log(`[app] Running migrations from ${migrationsFolder}...`);
+          await migrate(db, { migrationsFolder });
+          log("[app] Migrations completed successfully.");
+        } else {
+          log("[app] Could not find migrations folder — skipping auto-migration.", "warn");
+        }
+      } catch (err: any) {
+        log(`[app] Migration failed: ${err.message}`, "error");
       }
-    } catch (err: any) {
-      log(`[app] Migration failed: ${err.message}`, "error");
-      // Don't rethrow here to allow the app to start even if migration fails
-      // This is helpful if the DB is already migrated but the migration check fails
+    };
+
+    if (process.env.VERCEL) {
+      runMigrations().catch(err => log(`[app] Background migration failed: ${err.message}`, "error"));
+    } else {
+      await runMigrations();
     }
   } else {
     log("[app] DATABASE_URL not set — skipping migrations.", "warn");

@@ -95,8 +95,15 @@ export async function registerRoutes(
     })
   );
 
-  if (process.env.DATABASE_URL) {
-    await ensureDefaultAdmin();
+  if (dbUrl) {
+    // Only run ensureDefaultAdmin if we're not on Vercel or if explicitly requested
+    // On Vercel, this can cause cold start timeouts
+    if (!process.env.VERCEL) {
+      await ensureDefaultAdmin();
+    } else {
+      // Run it in the background on Vercel
+      ensureDefaultAdmin().catch(err => console.error("Background admin check failed:", err));
+    }
   } else {
     console.warn("DATABASE_URL not set — skipping default admin check.");
   }
@@ -543,43 +550,27 @@ export async function registerRoutes(
   return httpServer;
 }
 
-let adminCreated = false;
+let adminCheckPromise: Promise<void> | null = null;
 async function ensureDefaultAdmin() {
-  if (adminCreated) return;
-  try {
-    const existing = await storage.getUserByUsername("admin");
-    if (!existing) {
-      const hashedPassword = await bcrypt.hash("admin123", 10);
-      await storage.createUser({
-        username: "admin",
-        password: hashedPassword,
-        fullName: "Administrator",
-        role: "admin",
-      });
-      console.log("Default admin account created (username: admin, password: admin123)");
-      console.warn(
-        "\n" +
-        "========================================================\n" +
-        "  SECURITY WARNING: Default admin account created.\n" +
-        "  Username: admin  |  Password: admin123\n" +
-        "  CHANGE THIS PASSWORD before going to production!\n" +
-        "========================================================\n"
-      );
-    } else {
-      const isDefaultPassword = await bcrypt.compare("admin123", existing.password);
-      if (isDefaultPassword) {
-        console.warn(
-          "\n" +
-          "========================================================\n" +
-          "  SECURITY WARNING: Admin account still uses the\n" +
-          "  default password 'admin123'.\n" +
-          "  CHANGE THIS PASSWORD before going to production!\n" +
-          "========================================================\n"
-        );
+  if (adminCheckPromise) return adminCheckPromise;
+
+  adminCheckPromise = (async () => {
+    try {
+      const existing = await storage.getUserByUsername("admin");
+      if (!existing) {
+        const hashedPassword = await bcrypt.hash("admin123", 10);
+        await storage.createUser({
+          username: "admin",
+          password: hashedPassword,
+          fullName: "Administrator",
+          role: "admin",
+        });
+        console.log("Default admin account created (username: admin, password: admin123)");
       }
+    } catch (error) {
+      console.error("Failed to create default admin:", error);
     }
-    adminCreated = true;
-  } catch (error) {
-    console.error("Failed to create default admin:", error);
-  }
+  })();
+
+  return adminCheckPromise;
 }
