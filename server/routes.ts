@@ -60,7 +60,7 @@ export async function registerRoutes(
   // On Vercel, we always use MemoryStore to avoid 'pg' initialization issues
   // and cold start timeouts related to DB connection pools in sessions.
   if (dbUrl && !isVercel) {
-    const connectPg = require("connect-pg-simple");
+    const { default: connectPg } = await import("connect-pg-simple");
     const PgSession = connectPg(session);
     const sessionPool = buildPool(dbUrl);
 
@@ -74,7 +74,7 @@ export async function registerRoutes(
       console.error('Session Pool Error:', err);
     });
   } else {
-    const memoryStore = require("memorystore");
+    const { default: memoryStore } = await import("memorystore");
     const MemoryStore = memoryStore(session);
     sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h

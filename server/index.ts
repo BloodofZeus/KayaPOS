@@ -1,5 +1,6 @@
 import { createApp, log } from "./app";
 import { serveStatic } from "./static";
+import "dotenv/config";
 
 (async () => {
   const { app, httpServer } = await createApp();
@@ -16,7 +17,6 @@ import { serveStatic } from "./static";
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);

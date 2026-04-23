@@ -4,6 +4,9 @@ import * as schema from "@shared/schema";
 import type { Pool } from "pg";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 export type AppDatabase = NodePgDatabase<typeof schema> | NeonHttpDatabase<typeof schema>;
 
@@ -19,14 +22,13 @@ function maxConns(): number {
 
 export function buildPool(url: string): Pool {
   const isRemote = isRemoteHost(url);
-  // We only import 'pg' here to avoid loading it at the top level
-  // which causes issues on some serverless platforms
   const pg = require("pg");
-  return new pg.Pool({
+  const PoolClass = pg.Pool || pg.default?.Pool;
+  return new PoolClass({
     connectionString: url,
     max: maxConns(),
     ssl: isRemote ? { rejectUnauthorized: false } : false,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 10000,
   });
 }
 
@@ -60,6 +62,8 @@ export const db: AppDatabase = new Proxy({} as any, {
     return (initDb() as any)[prop];
   },
 });
+
+export { initDb };
 
 export async function reinitializeDb(url: string): Promise<void> {
   if (process.env.VERCEL) {

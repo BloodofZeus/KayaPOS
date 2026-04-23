@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { db } from "./db";
+import { db, initDb } from "./db";
 import { registerRoutes } from "./routes";
 import path from "path";
 
@@ -28,6 +28,9 @@ export async function createApp() {
   app.set("trust proxy", 1);
 
   if (process.env.DATABASE_URL) {
+    // Initialize DB instance
+    await initDb();
+    
     // Run migrations in background on Vercel to avoid cold start timeout
     const runMigrations = async () => {
       try {
