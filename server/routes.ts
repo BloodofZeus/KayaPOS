@@ -61,7 +61,7 @@ export async function registerRoutes(
   if (dbUrl && !isVercel) {
     const { default: connectPg } = await import("connect-pg-simple");
     const PgSession = connectPg(session);
-    const sessionPool = await buildPool(dbUrl);
+    const sessionPool = buildPool(dbUrl);
 
     sessionStore = new PgSession({
       pool: sessionPool,
@@ -124,7 +124,7 @@ export async function registerRoutes(
         }
       }
 
-      const testPool = await buildPool(trimmedUrl);
+      const testPool = buildPool(trimmedUrl);
       try {
         const client = await testPool.connect();
         try {
@@ -158,7 +158,7 @@ export async function registerRoutes(
           return res.status(422).json({ ok: false, error: err.message });
         }
       } else {
-        const probePool = await buildPool(trimmedUrl);
+        const probePool = buildPool(trimmedUrl);
         try {
           const client = await probePool.connect();
           client.release();

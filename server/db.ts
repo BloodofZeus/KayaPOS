@@ -4,6 +4,9 @@ import * as schema from "../shared/schema";
 import type { Pool } from "pg";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 export type AppDatabase = NodePgDatabase<typeof schema> | NeonHttpDatabase<typeof schema>;
 
@@ -17,10 +20,10 @@ function maxConns(): number {
     : parseInt(process.env.DB_POOL_MAX || "10", 10);
 }
 
-export async function buildPool(url: string): Promise<Pool> {
+export function buildPool(url: string): Pool {
   const isRemote = isRemoteHost(url);
-  const { default: pg } = await import("pg");
-  const PoolClass = pg.Pool || (pg as any).default?.Pool;
+  const pg = require("pg");
+  const PoolClass = pg.Pool || pg.default?.Pool;
   return new PoolClass({
     connectionString: url,
     max: maxConns(),
@@ -31,7 +34,7 @@ export async function buildPool(url: string): Promise<Pool> {
 
 let _db: AppDatabase | null = null;
 
-async function initDb(): Promise<AppDatabase> {
+function initDb(): AppDatabase {
   if (!_db) {
     const url = process.env.DATABASE_URL;
     if (!url) {
@@ -49,8 +52,8 @@ async function initDb(): Promise<AppDatabase> {
       _db = drizzleNeon(sql, { schema });
     } else {
       console.log("[db] Initializing Node-Postgres database client for local/VPS...");
-      const { drizzle } = await import("drizzle-orm/node-postgres");
-      const pool = await buildPool(url);
+      const { drizzle } = require("drizzle-orm/node-postgres");
+      const pool = buildPool(url);
       _db = drizzle(pool, { schema });
     }
   }
@@ -59,13 +62,7 @@ async function initDb(): Promise<AppDatabase> {
 
 export const db: AppDatabase = new Proxy({} as any, {
   get(_target, prop: string | symbol) {
-    const instance = _db;
-    if (!instance) {
-      // In production/Vercel, initDb should have been called by createApp
-      // If not, we can't easily initialize synchronously here.
-      throw new Error(`Database not initialized. Accessing '${String(prop)}' before initDb() completion.`);
-    }
-    return (instance as any)[prop];
+    return (initDb() as any)[prop];
   },
 });
 
@@ -78,8 +75,8 @@ export async function reinitializeDb(url: string): Promise<void> {
     _db = drizzleNeon(sql, { schema });
   } else {
     console.log("[db] Re-initializing Node-Postgres database client for local/VPS...");
-    const { drizzle } = await import("drizzle-orm/node-postgres");
-    const pool = await buildPool(url);
+    const { drizzle } = require("drizzle-orm/node-postgres");
+    const pool = buildPool(url);
     _db = drizzle(pool, { schema });
   }
   process.env.DATABASE_URL = url;
