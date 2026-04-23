@@ -5,9 +5,9 @@ import rateLimit from "express-rate-limit";
 import { db, isRemoteHost, reinitializeDb, buildPool } from "./db";
 import { storage } from "./storage";
 import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
-const MAX_SYNC_ITEMS = 500;
+const MAX_SYNC_ITEMS = 1000;
 
 declare module "express-session" {
   interface SessionData {
@@ -256,7 +256,11 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       console.error("Login error:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ 
+        error: "Internal Server Error", 
+        message: error.message,
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined 
+      });
     }
   });
 
@@ -384,20 +388,21 @@ export async function registerRoutes(
 
   app.post("/api/sync/products", requireAuth, async (req, res) => {
     try {
-      const products = req.body;
+      const { products } = req.body;
       if (!Array.isArray(products)) {
-        return res.status(400).json({ error: "Expected array of products" });
-      }
-      if (products.length > MAX_SYNC_ITEMS) {
-        return res.status(400).json({ error: `Batch too large. Maximum ${MAX_SYNC_ITEMS} items per request.` });
+        return res.status(400).json({ error: "Products array is required" });
       }
 
-      const BATCH_SIZE = 50;
+      // Limit the number of items to prevent timeouts on serverless functions
+      const limitedProducts = products.slice(0, MAX_SYNC_ITEMS);
       const results = [];
-      for (let i = 0; i < products.length; i += BATCH_SIZE) {
-        const batch = products.slice(i, i + BATCH_SIZE);
-        for (const product of batch) {
-          const existing = await db.select().from(syncedProducts).where(eq(syncedProducts.clientId, product.clientId)).limit(1);
+      
+      for (const product of limitedProducts) {
+        if (product.clientId) {
+          const existing = await db.select().from(syncedProducts)
+            .where(eq(syncedProducts.clientId, product.clientId))
+            .limit(1);
+
           if (existing.length > 0) {
             await db.update(syncedProducts).set({
               name: product.name,
@@ -445,7 +450,7 @@ export async function registerRoutes(
           }
         }
       }
-      res.json({ synced: results.length, results });
+      res.json({ synced: results.length, total: products.length, results });
     } catch (error: any) {
       console.error("Sync products error:", error);
       res.status(500).json({ error: error.message });
@@ -454,19 +459,16 @@ export async function registerRoutes(
 
   app.post("/api/sync/orders", requireAuth, async (req, res) => {
     try {
-      const orders = req.body;
+      const { orders } = req.body;
       if (!Array.isArray(orders)) {
-        return res.status(400).json({ error: "Expected array of orders" });
-      }
-      if (orders.length > MAX_SYNC_ITEMS) {
-        return res.status(400).json({ error: `Batch too large. Maximum ${MAX_SYNC_ITEMS} items per request.` });
+        return res.status(400).json({ error: "Orders array is required" });
       }
 
+      const limitedOrders = orders.slice(0, MAX_SYNC_ITEMS);
       const results = [];
-      const BATCH_SIZE = 50;
-      for (let i = 0; i < orders.length; i += BATCH_SIZE) {
-        const batch = orders.slice(i, i + BATCH_SIZE);
-        for (const order of batch) {
+      
+      for (const order of limitedOrders) {
+        if (order.clientId) {
           const existing = await db.select().from(syncedOrders).where(eq(syncedOrders.clientId, order.clientId)).limit(1);
           if (existing.length === 0) {
             await db.insert(syncedOrders).values({
@@ -491,7 +493,7 @@ export async function registerRoutes(
           }
         }
       }
-      res.json({ synced: results.filter(r => r.action === "created").length, results });
+      res.json({ synced: results.filter(r => r.action === "created").length, total: orders.length, results });
     } catch (error: any) {
       console.error("Sync orders error:", error);
       res.status(500).json({ error: error.message });
@@ -500,35 +502,36 @@ export async function registerRoutes(
 
   app.post("/api/sync/customers", requireAuth, async (req, res) => {
     try {
-      const customers = req.body;
+      const { customers } = req.body;
       if (!Array.isArray(customers)) {
-        return res.status(400).json({ error: "Expected array of customers" });
-      }
-      if (customers.length > MAX_SYNC_ITEMS) {
-        return res.status(400).json({ error: `Batch too large. Maximum ${MAX_SYNC_ITEMS} items per request.` });
+        return res.status(400).json({ error: "Customers array is required" });
       }
 
+      const limitedCustomers = customers.slice(0, MAX_SYNC_ITEMS);
       const results = [];
-      for (const customer of customers) {
-        const existing = await db.select().from(syncedCustomers).where(eq(syncedCustomers.clientId, customer.clientId)).limit(1);
-        if (existing.length > 0) {
-          await db.update(syncedCustomers).set({
-            name: customer.name,
-            phone: customer.phone,
-            balance: customer.balance.toString(),
-          }).where(eq(syncedCustomers.clientId, customer.clientId));
-          results.push({ clientId: customer.clientId, action: "updated" });
-        } else {
-          await db.insert(syncedCustomers).values({
-            clientId: customer.clientId,
-            name: customer.name,
-            phone: customer.phone,
-            balance: customer.balance.toString(),
-          });
-          results.push({ clientId: customer.clientId, action: "created" });
+      
+      for (const customer of limitedCustomers) {
+        if (customer.clientId) {
+          const existing = await db.select().from(syncedCustomers).where(eq(syncedCustomers.clientId, customer.clientId)).limit(1);
+          if (existing.length > 0) {
+            await db.update(syncedCustomers).set({
+              name: customer.name,
+              phone: customer.phone,
+              balance: customer.balance.toString(),
+            }).where(eq(syncedCustomers.clientId, customer.clientId));
+            results.push({ clientId: customer.clientId, action: "updated" });
+          } else {
+            await db.insert(syncedCustomers).values({
+              clientId: customer.clientId,
+              name: customer.name,
+              phone: customer.phone,
+              balance: customer.balance.toString(),
+            });
+            results.push({ clientId: customer.clientId, action: "created" });
+          }
         }
       }
-      res.json({ synced: results.length, results });
+      res.json({ synced: results.length, total: customers.length, results });
     } catch (error: any) {
       console.error("Sync customers error:", error);
       res.status(500).json({ error: error.message });
