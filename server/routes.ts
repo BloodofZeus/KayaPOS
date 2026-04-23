@@ -6,7 +6,6 @@ import { db, isRemoteHost, reinitializeDb, buildPool } from "./db";
 import { storage } from "./storage";
 import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "../shared/schema";
 import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
 
 const MAX_SYNC_ITEMS = 500;
 
@@ -196,6 +195,7 @@ export async function registerRoutes(
       const validRoles = ["admin", "manager", "cashier"];
       const safeRole = validRoles.includes(role) ? role : "cashier";
 
+      const { default: bcrypt } = await import("bcryptjs");
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await storage.createUser({
         username,
@@ -240,6 +240,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Account has been deactivated. Contact your admin." });
       }
 
+      const { default: bcrypt } = await import("bcryptjs");
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) {
         return res.status(401).json({ error: "Invalid username or password" });
@@ -326,6 +327,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Username already taken" });
       }
 
+      const { default: bcrypt } = await import("bcryptjs");
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await storage.createUser({
         username,
@@ -358,7 +360,10 @@ export async function registerRoutes(
       if (fullName !== undefined) updateData.fullName = fullName;
       if (role !== undefined) updateData.role = role;
       if (isActive !== undefined) updateData.isActive = isActive;
-      if (password) updateData.password = await bcrypt.hash(password, 10);
+      if (password) {
+        const { default: bcrypt } = await import("bcryptjs");
+        updateData.password = await bcrypt.hash(password, 10);
+      }
 
       const updated = await storage.updateUser(String(req.params.id), updateData);
       if (!updated) {
@@ -590,6 +595,7 @@ async function ensureDefaultAdmin() {
     try {
       const existing = await storage.getUserByUsername("admin");
       if (!existing) {
+        const { default: bcrypt } = await import("bcryptjs");
         const hashedPassword = await bcrypt.hash("admin123", 10);
         await storage.createUser({
           username: "admin",
