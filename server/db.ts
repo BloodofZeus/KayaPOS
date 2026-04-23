@@ -43,7 +43,9 @@ function initDb(): AppDatabase {
       console.error("[db] DATABASE_URL environment variable is missing!");
       // On Vercel, this is a fatal error for database-connected routes
       return new Proxy({} as any, {
-        get() {
+        get(_target, prop: string | symbol) {
+          if (prop === "then") return undefined;
+          if (prop === "inspect" || prop === "toJSON" || typeof prop === "symbol") return undefined;
           throw new Error("DATABASE_URL is not configured. Please add it to your Vercel Environment Variables.");
         }
       }) as unknown as AppDatabase;
@@ -71,23 +73,35 @@ function initDb(): AppDatabase {
 
 export const db: AppDatabase = new Proxy({} as any, {
   get(_target, prop: string | symbol) {
-    // If _db is not initialized, initDb will attempt to initialize it synchronously.
-    // This is safe because drizzle-orm clients are created synchronously.
+    if (prop === "then") return undefined;
+    if (prop === "inspect" || prop === "toJSON" || typeof prop === "symbol") return undefined;
+    
+    // For synchronous access through proxy, we try to initialize
+    // This is safe for drizzle because client creation is synchronous
     return (initDb() as any)[prop];
   },
 });
 
 export { initDb };
 
-export async function reinitializeDb(url: string): Promise<void> {
+export async function reinitializeDb(url: string): Promise<AppDatabase> {
   console.log(`[db] Re-initializing database with new URL (isRemote: ${isRemoteHost(url)})...`);
-  if (process.env.VERCEL) {
-    const sql = neon(url);
-    _db = drizzleNeon(sql, { schema });
-  } else {
-    const { drizzle } = require("drizzle-orm/node-postgres");
-    const pool = buildPool(url);
-    _db = drizzle(pool, { schema });
+  try {
+    if (process.env.VERCEL) {
+      console.log("[db] Initializing Neon HTTP database client for Vercel...");
+      // Neon HTTP driver works best with 'neon' package
+      const sql = neon(url);
+      _db = drizzleNeon(sql, { schema });
+    } else {
+      console.log("[db] Initializing Node-Postgres database client for local/VPS...");
+      const { drizzle } = require("drizzle-orm/node-postgres");
+      const pool = buildPool(url);
+      _db = drizzle(pool, { schema });
+    }
+    process.env.DATABASE_URL = url;
+    return _db!;
+  } catch (err: any) {
+    console.error(`[db] Error during database re-initialization: ${err.message}`);
+    throw err;
   }
-  process.env.DATABASE_URL = url;
 }

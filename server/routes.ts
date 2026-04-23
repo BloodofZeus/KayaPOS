@@ -6,6 +6,9 @@ import { db, isRemoteHost, reinitializeDb, buildPool } from "./db";
 import { storage } from "./storage";
 import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "../shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 const MAX_SYNC_ITEMS = 1000;
 
@@ -46,38 +49,43 @@ export async function registerRoutes(
   const isProduction = process.env.NODE_ENV === "production";
   const isVercel = !!process.env.VERCEL;
 
-  if (isProduction && !process.env.SESSION_SECRET) {
-    console.warn(
-      "SESSION_SECRET environment variable is not set in production. " +
-      "Using a fallback secret for now, but this is insecure. Please set SESSION_SECRET in Vercel."
-    );
-  }
-
   const dbUrl = process.env.DATABASE_URL;
   let sessionStore: session.Store;
 
   // On Vercel, we always use MemoryStore to avoid 'pg' initialization issues
   // and cold start timeouts related to DB connection pools in sessions.
   if (dbUrl && !isVercel) {
-    const { default: connectPg } = await import("connect-pg-simple");
-    const PgSession = connectPg(session);
-    const sessionPool = buildPool(dbUrl);
+    try {
+      const { default: connectPg } = await import("connect-pg-simple");
+      const PgSession = connectPg(session);
+      const sessionPool = buildPool(dbUrl);
 
-    sessionStore = new PgSession({
-      pool: sessionPool,
-      tableName: "sessions",
-      createTableIfMissing: false,
-    });
-    
-    sessionPool.on('error', (err: Error) => {
-      console.error('Session Pool Error:', err);
-    });
+      sessionStore = new PgSession({
+        pool: sessionPool,
+        tableName: "sessions",
+        createTableIfMissing: true,
+      });
+      
+      sessionPool.on('error', (err: Error) => {
+        console.error('Session Pool Error:', err);
+      });
+    } catch (err) {
+      console.warn("Failed to initialize PG session store, falling back to MemoryStore:", err);
+      const MemoryStore = require("memorystore")(session);
+      sessionStore = new MemoryStore({
+        checkPeriod: 86400000,
+      });
+    }
   } else {
-    const { default: memoryStore } = await import("memorystore");
-    const MemoryStore = memoryStore(session);
+    // We use a simple memory store for sessions on Vercel
+    const MemoryStore = require("memorystore")(session);
     sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
     });
+  }
+
+  if (isProduction) {
+    app.set("trust proxy", 1);
   }
 
   app.use(
@@ -86,6 +94,7 @@ export async function registerRoutes(
       secret: process.env.SESSION_SECRET || "kaya-pos-dev-secret-not-for-production",
       resave: false,
       saveUninitialized: false,
+      name: "kaya-pos-session",
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
