@@ -52,6 +52,7 @@ function initDb(): AppDatabase {
     try {
       if (process.env.VERCEL) {
         console.log("[db] Initializing Neon HTTP database client for Vercel...");
+        // Neon HTTP driver works best with 'neon' package
         const sql = neon(url);
         _db = drizzleNeon(sql, { schema });
       } else {

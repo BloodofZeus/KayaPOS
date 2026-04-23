@@ -256,6 +256,14 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       console.error("Login error:", error);
+      // Log more info to Vercel dashboard
+      if (process.env.VERCEL) {
+        console.error("Vercel Login failure details:", {
+          message: error.message,
+          stack: error.stack,
+          db_init: !!db
+        });
+      }
       res.status(500).json({ 
         error: "Internal Server Error", 
         message: error.message,
