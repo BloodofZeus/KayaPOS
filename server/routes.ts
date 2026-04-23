@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import memoryStore from "memorystore";
 import rateLimit from "express-rate-limit";
 import { db, isRemoteHost, reinitializeDb } from "./db";
 import { storage } from "./storage";
@@ -11,6 +12,7 @@ import bcrypt from "bcryptjs";
 import pg from "pg";
 
 const PgSession = connectPg(session);
+const MemoryStore = memoryStore(session);
 
 const MAX_SYNC_ITEMS = 500;
 
@@ -58,19 +60,29 @@ export async function registerRoutes(
   }
 
   const dbUrl = process.env.DATABASE_URL;
-  const sessionPool = new pg.Pool({
-    connectionString: dbUrl,
-    max: Number(process.env.DB_POOL_MAX ?? (process.env.VERCEL ? 2 : 10)),
-    ssl: dbUrl && isRemoteHost(dbUrl) ? { rejectUnauthorized: false } : false,
-  });
+  let sessionStore: session.Store;
+
+  if (dbUrl) {
+    const sessionPool = new pg.Pool({
+      connectionString: dbUrl,
+      max: Number(process.env.DB_POOL_MAX ?? (process.env.VERCEL ? 2 : 10)),
+      ssl: isRemoteHost(dbUrl) ? { rejectUnauthorized: false } : false,
+    });
+
+    sessionStore = new PgSession({
+      pool: sessionPool,
+      tableName: "sessions",
+      createTableIfMissing: true,
+    });
+  } else {
+    sessionStore = new MemoryStore({
+      checkPeriod: 86400000, // prune expired entries every 24h
+    });
+  }
 
   app.use(
     session({
-      store: new PgSession({
-        pool: sessionPool,
-        tableName: "sessions",
-        createTableIfMissing: true,
-      }),
+      store: sessionStore,
       secret: process.env.SESSION_SECRET || "kaya-pos-dev-secret-not-for-production",
       resave: false,
       saveUninitialized: false,
@@ -83,7 +95,11 @@ export async function registerRoutes(
     })
   );
 
-  await ensureDefaultAdmin();
+  if (process.env.DATABASE_URL) {
+    await ensureDefaultAdmin();
+  } else {
+    console.warn("DATABASE_URL not set — skipping default admin check.");
+  }
 
   if (process.env.DISABLE_DB_TEST !== "1") {
     app.post("/api/setup/test-db", testDbLimiter, async (req, res) => {

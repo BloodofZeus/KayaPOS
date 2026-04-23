@@ -42,13 +42,14 @@ export default function Login() {
     });
     const text = await res.text();
     try {
-      return { status: res.status, data: JSON.parse(text) as Record<string, unknown> };
+      const data = JSON.parse(text) as Record<string, unknown>;
+      return { status: res.status, data };
     } catch {
       return {
         status: res.status,
         data: {
           ok: false,
-          error: `Server returned HTTP ${res.status}. The API may not be ready yet — check that DATABASE_URL is configured in your deployment settings.`,
+          error: `Server returned HTTP ${res.status}. ${text.slice(0, 100)}`,
         } as Record<string, unknown>,
       };
     }
@@ -65,7 +66,7 @@ export default function Login() {
         setDbTestStatus("ok");
       } else {
         setDbTestStatus("error");
-        setDbTestError((data.error as string) || "Connection failed.");
+        setDbTestError((data.error as string) || (data.message as string) || "Connection failed.");
       }
     } catch {
       setDbTestStatus("error");
