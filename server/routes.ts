@@ -4,7 +4,7 @@ import session from "express-session";
 import rateLimit from "express-rate-limit";
 import { db, isRemoteHost, reinitializeDb, buildPool } from "./db";
 import { storage } from "./storage";
-import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "@shared/schema";
+import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 

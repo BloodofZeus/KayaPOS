@@ -1,6 +1,6 @@
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import * as schema from "@shared/schema";
+import * as schema from "../shared/schema";
 import type { Pool } from "pg";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
@@ -70,9 +70,11 @@ export { initDb };
 
 export async function reinitializeDb(url: string): Promise<void> {
   if (process.env.VERCEL) {
+    console.log("[db] Re-initializing Neon HTTP database client for Vercel...");
     const sql = neon(url);
     _db = drizzleNeon(sql, { schema });
   } else {
+    console.log("[db] Re-initializing Node-Postgres database client for local/VPS...");
     const { drizzle } = require("drizzle-orm/node-postgres");
     const pool = buildPool(url);
     _db = drizzle(pool, { schema });
