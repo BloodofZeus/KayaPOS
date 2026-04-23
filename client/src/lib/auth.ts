@@ -53,12 +53,19 @@ export const useAuth = create<AuthState>((set, get) => ({
       body: JSON.stringify({ username, password }),
     });
 
+    const text = await res.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Server returned error (${res.status}): ${text.slice(0, 100)}`);
+    }
+
     if (!res.ok) {
-      const data = await res.json();
       throw new Error(data.error || 'Login failed');
     }
 
-    const user = await res.json();
+    const user = data as AuthUser;
     setCachedUser(user);
     set({ user });
     return user;
@@ -82,7 +89,8 @@ export const useAuth = create<AuthState>((set, get) => ({
 
       const res = await fetch('/api/auth/me');
       if (res.ok) {
-        const user = await res.json();
+        const data = await res.json();
+        const user = data as AuthUser;
         setCachedUser(user);
         set({ user, isLoading: false });
         return user;

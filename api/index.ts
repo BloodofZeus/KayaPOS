@@ -23,21 +23,26 @@ export default async function handler(
   res: ServerResponse,
 ): Promise<void> {
   try {
+    console.log(`[handler] Incoming request: ${req.method} ${req.url}`);
     const app = await getApp();
     (app as unknown as NodeHandler)(req, res);
   } catch (err) {
-    console.error("Handler initialization error:", err);
+    const errorDetails = {
+      ok: false,
+      error: "Internal Server Error",
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV,
+      hasDbUrl: !!process.env.DATABASE_URL,
+    };
+    
+    console.error("Handler initialization error:", errorDetails);
+    
     if (!res.headersSent) {
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
-      res.end(
-        JSON.stringify({
-          ok: false,
-          error: "Internal Server Error",
-          message: err instanceof Error ? err.message : "Unknown error during initialization",
-          stack: process.env.NODE_ENV === "development" ? (err as Error).stack : undefined,
-        }),
-      );
+      res.end(JSON.stringify(errorDetails));
     }
   }
 }

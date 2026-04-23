@@ -4,10 +4,6 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { db } from "./db";
 import { registerRoutes } from "./routes";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 declare module "http" {
   interface IncomingMessage {
@@ -38,8 +34,7 @@ export async function createApp() {
       const possiblePaths = [
         path.join(process.cwd(), "migrations"),
         path.join(process.cwd(), "dist", "migrations"),
-        path.join(__dirname, "migrations"),
-        path.join(__dirname, "..", "migrations"),
+        path.join(process.cwd(), "server", "migrations"),
       ];
 
       let migrationsFolder = "";
@@ -53,6 +48,8 @@ export async function createApp() {
 
       if (migrationsFolder) {
         log(`[app] Running migrations from ${migrationsFolder}...`);
+        // On Vercel, we might want to avoid blocking the main thread for too long
+        // but for now let's just keep it and add a timeout if possible
         await migrate(db, { migrationsFolder });
         log("[app] Migrations completed successfully.");
       } else {

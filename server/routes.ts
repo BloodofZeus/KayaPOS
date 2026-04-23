@@ -4,7 +4,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import memoryStore from "memorystore";
 import rateLimit from "express-rate-limit";
-import { db, isRemoteHost, reinitializeDb } from "./db";
+import { db, isRemoteHost, reinitializeDb, buildPool } from "./db";
 import { storage } from "./storage";
 import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -63,16 +63,16 @@ export async function registerRoutes(
   let sessionStore: session.Store;
 
   if (dbUrl) {
-    const sessionPool = new pg.Pool({
-      connectionString: dbUrl,
-      max: Number(process.env.DB_POOL_MAX ?? (process.env.VERCEL ? 2 : 10)),
-      ssl: isRemoteHost(dbUrl) ? { rejectUnauthorized: false } : false,
-    });
+    const sessionPool = buildPool(dbUrl);
 
     sessionStore = new PgSession({
-      pool: sessionPool,
+      pool: sessionPool as any,
       tableName: "sessions",
-      createTableIfMissing: true,
+      createTableIfMissing: false, // Table already exists or will be created by migrations if we add it there
+    });
+    
+    (sessionPool as any).on('error', (err: any) => {
+      console.error('Session Pool Error:', err);
     });
   } else {
     sessionStore = new MemoryStore({
@@ -107,14 +107,9 @@ export async function registerRoutes(
       if (!url || typeof url !== "string" || url.trim() === "") {
         return res.status(400).json({ ok: false, error: "A database URL is required." });
       }
-      const testPool = new pg.Pool({
-        connectionString: url.trim(),
-        max: 1,
-        connectionTimeoutMillis: 5000,
-        ssl: isRemoteHost(url.trim()) ? { rejectUnauthorized: false } : false,
-      });
+      const testPool = buildPool(url.trim());
       try {
-        const client = await testPool.connect();
+        const client = await (testPool as any).connect();
         try {
           await client.query("SELECT 1");
           return res.json({ ok: true });
@@ -125,7 +120,7 @@ export async function registerRoutes(
         const message = err instanceof Error ? err.message : "Connection failed.";
         return res.status(422).json({ ok: false, error: message });
       } finally {
-        testPool.end().catch(() => {});
+        (testPool as any).end().catch(() => {});
       }
     });
 
@@ -134,20 +129,15 @@ export async function registerRoutes(
       if (!url || typeof url !== "string" || url.trim() === "") {
         return res.status(400).json({ ok: false, error: "A database URL is required." });
       }
-      const probePool = new pg.Pool({
-        connectionString: url.trim(),
-        max: 1,
-        connectionTimeoutMillis: 5000,
-        ssl: isRemoteHost(url.trim()) ? { rejectUnauthorized: false } : false,
-      });
+      const probePool = buildPool(url.trim());
       try {
-        const client = await probePool.connect();
+        const client = await (probePool as any).connect();
         client.release();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Connection failed.";
         return res.status(422).json({ ok: false, error: message });
       } finally {
-        probePool.end().catch(() => {});
+        (probePool as any).end().catch(() => {});
       }
       await reinitializeDb(url.trim());
       return res.json({ ok: true });
@@ -553,7 +543,9 @@ export async function registerRoutes(
   return httpServer;
 }
 
+let adminCreated = false;
 async function ensureDefaultAdmin() {
+  if (adminCreated) return;
   try {
     const existing = await storage.getUserByUsername("admin");
     if (!existing) {
@@ -586,6 +578,7 @@ async function ensureDefaultAdmin() {
         );
       }
     }
+    adminCreated = true;
   } catch (error) {
     console.error("Failed to create default admin:", error);
   }
