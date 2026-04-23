@@ -1,18 +1,12 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
-import memoryStore from "memorystore";
 import rateLimit from "express-rate-limit";
 import { db, isRemoteHost, reinitializeDb, buildPool } from "./db";
 import { storage } from "./storage";
 import { syncedProducts, syncedOrders, syncedCustomers, syncedBusinessSettings } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import pg from "pg";
-
-const PgSession = connectPg(session);
-const MemoryStore = memoryStore(session);
 
 const MAX_SYNC_ITEMS = 500;
 
@@ -51,6 +45,7 @@ export async function registerRoutes(
 ): Promise<Server> {
 
   const isProduction = process.env.NODE_ENV === "production";
+  const isVercel = !!process.env.VERCEL;
 
   if (isProduction && !process.env.SESSION_SECRET) {
     console.warn(
@@ -62,19 +57,25 @@ export async function registerRoutes(
   const dbUrl = process.env.DATABASE_URL;
   let sessionStore: session.Store;
 
-  if (dbUrl) {
+  // On Vercel, we always use MemoryStore to avoid 'pg' initialization issues
+  // and cold start timeouts related to DB connection pools in sessions.
+  if (dbUrl && !isVercel) {
+    const connectPg = require("connect-pg-simple");
+    const PgSession = connectPg(session);
     const sessionPool = buildPool(dbUrl);
 
     sessionStore = new PgSession({
       pool: sessionPool as any,
       tableName: "sessions",
-      createTableIfMissing: false, // Table already exists or will be created by migrations if we add it there
+      createTableIfMissing: false,
     });
     
     (sessionPool as any).on('error', (err: any) => {
       console.error('Session Pool Error:', err);
     });
   } else {
+    const memoryStore = require("memorystore");
+    const MemoryStore = memoryStore(session);
     sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
     });
@@ -113,9 +114,9 @@ export async function registerRoutes(
 
       const trimmedUrl = url.trim();
 
-      if (process.env.VERCEL && isRemoteHost(trimmedUrl)) {
+      if (isVercel && isRemoteHost(trimmedUrl)) {
         try {
-          const { neon } = await import("@neondatabase/serverless");
+          const { neon } = require("@neondatabase/serverless");
           const sql = neon(trimmedUrl);
           await sql`SELECT 1`;
           return res.json({ ok: true });
@@ -126,7 +127,7 @@ export async function registerRoutes(
 
       const testPool = buildPool(trimmedUrl);
       try {
-        const client = await testPool.connect();
+        const client = await (testPool as any).connect();
         try {
           await client.query("SELECT 1");
           return res.json({ ok: true });
@@ -137,7 +138,7 @@ export async function registerRoutes(
         const message = err instanceof Error ? err.message : "Connection failed.";
         return res.status(422).json({ ok: false, error: message });
       } finally {
-        testPool.end().catch(() => {});
+        (testPool as any).end().catch(() => {});
       }
     });
 
@@ -149,9 +150,9 @@ export async function registerRoutes(
 
       const trimmedUrl = url.trim();
 
-      if (process.env.VERCEL && isRemoteHost(trimmedUrl)) {
+      if (isVercel && isRemoteHost(trimmedUrl)) {
         try {
-          const { neon } = await import("@neondatabase/serverless");
+          const { neon } = require("@neondatabase/serverless");
           const sql = neon(trimmedUrl);
           await sql`SELECT 1`;
         } catch (err: any) {
@@ -160,13 +161,13 @@ export async function registerRoutes(
       } else {
         const probePool = buildPool(trimmedUrl);
         try {
-          const client = await probePool.connect();
+          const client = await (probePool as any).connect();
           client.release();
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : "Connection failed.";
           return res.status(422).json({ ok: false, error: message });
         } finally {
-          probePool.end().catch(() => {});
+          (probePool as any).end().catch(() => {});
         }
       }
       

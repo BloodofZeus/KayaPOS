@@ -1,6 +1,4 @@
-import { drizzle } from "drizzle-orm/node-postgres";
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
-import pg from "pg";
 import { neon } from "@neondatabase/serverless";
 import * as schema from "@shared/schema";
 
@@ -14,8 +12,11 @@ function maxConns(): number {
     : parseInt(process.env.DB_POOL_MAX || "10", 10);
 }
 
-export function buildPool(url: string): pg.Pool {
+export function buildPool(url: string): any {
   const isRemote = isRemoteHost(url);
+  // We only import 'pg' here to avoid loading it at the top level
+  // which causes issues on some serverless platforms
+  const pg = require("pg");
   return new pg.Pool({
     connectionString: url,
     max: maxConns(),
@@ -41,6 +42,7 @@ function initDb(): any {
       const sql = neon(url);
       _db = drizzleNeon(sql, { schema });
     } else {
+      const { drizzle } = require("drizzle-orm/node-postgres");
       const pool = buildPool(url);
       _db = drizzle(pool, { schema });
     }
