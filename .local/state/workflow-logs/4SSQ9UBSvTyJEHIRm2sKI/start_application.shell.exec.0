@@ -13,6 +13,13 @@
 6:06:20 PM [express] GET /api/auth/me 401 in 2ms :: {"error":"Not authenticated"}
 6:06:23 PM [express] GET /api/auth/me 304 in 6ms :: {"id":"145d987d-6a18-4fb9-ae6f-d748f49501dd","username":"admin","fullName":"Administrator","role":"admin","isActive":true}
 6:06:28 PM [express] GET /api/auth/me 401 in 1ms :: {"error":"Not authenticated"}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9afd06c2bd9cab30ec5e526b9f1dd1a12cca359b
+>>>>>>> 3808ee883ff6fe70e5a7e92bab71c99c6347f327
 6:09:28 PM [express] GET /api/admin/users 304 in 50ms :: [{"id":"145d987d-6a18-4fb9-ae6f-d748f49501dd","username":"admin","fullName":"Administrator","role":"admin","isActive":true,"createdAt":"2026-04-02T14:28:08.895Z"}]
 6:09:32 PM [express] POST /api/auth/logout 200 in 7ms :: {"success":true}
 6:21:30 PM [express] POST /api/setup/test-db 200 in 29ms :: {"ok":false,"error":"getaddrinfo ENOTFOUND db.trrqbalbkoqnkhggddor.supabase.co"}
@@ -101,3 +108,11 @@ See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode de
 
 
 [1;1H[0J[2m6:37:19 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Login.tsx, /src/index.css[22m [33m(x3)[39m
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> b0b07abf2cdacb24363893d2c041b67ba79aa608
+>>>>>>> 9afd06c2bd9cab30ec5e526b9f1dd1a12cca359b
+>>>>>>> 3808ee883ff6fe70e5a7e92bab71c99c6347f327
