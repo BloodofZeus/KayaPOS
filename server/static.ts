@@ -19,7 +19,7 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  app.get("*", (req, res, next) => {
+  app.get("*path", (req, res, next) => {
     // Don't intercept API calls with index.html
     if (req.path.startsWith("/api")) {
       return next();
